@@ -71,35 +71,43 @@ function hideModal() {
  */
 async function initializeFirebase() {
     try {
-        // No es necesario parsear __firebase_config ya que está hardcodeado
-        // No es necesario verificar si firebaseConfig está vacío, ya que lo hemos definido
-        
         console.log("Firebase config (hardcoded):", firebaseConfig);
+
+        // Basic validation for critical config fields
+        if (!firebaseConfig.apiKey || !firebaseConfig.authDomain || !firebaseConfig.projectId) {
+            const missingFields = [];
+            if (!firebaseConfig.apiKey) missingFields.push("apiKey");
+            if (!firebaseConfig.authDomain) missingFields.push("authDomain");
+            if (!firebaseConfig.projectId) missingFields.push("projectId");
+            showModal(`Error: Configuración de Firebase incompleta. Faltan campos: ${missingFields.join(', ')}. La aplicación puede no funcionar correctamente.`);
+            console.error("Firebase configuration is missing critical fields:", missingFields);
+            return;
+        }
 
         app = initializeApp(firebaseConfig);
         db = getFirestore(app);
         auth = getAuth(app);
 
-        // Ya no dependemos de __initial_auth_token, siempre intentamos autenticación anónima
+        // Always attempt anonymous authentication
         await signInAnonymously(auth);
         console.log("Autenticación anónima exitosa.");
         
-        // Listener para el estado de autenticación
+        // Listener for authentication state changes
         onAuthStateChanged(auth, (user) => {
             if (user) {
                 userId = user.uid;
-                console.log("Firebase inicializado y usuario autenticado:", userId);
-                // Una vez autenticado, configurar los listeners de Firestore
+                console.log("Firebase initialized and user authenticated:", userId);
+                // Once authenticated, set up Firestore listeners
                 setupFirestoreListeners();
             } else {
-                console.log("No hay usuario autenticado después de onAuthStateChanged.");
+                console.log("No user authenticated after onAuthStateChanged.");
                 userId = null;
-                // Limpiar datos si no hay usuario
+                // Clear data if no user
                 generalParticipants = [];
                 generalExpenses = [];
                 travelParticipants = [];
                 travelExpenses = [];
-                updateUI(); // Actualizar UI para reflejar datos vacíos
+                updateUI(); // Update UI to reflect empty data
                 showModal("No se pudo autenticar al usuario. Algunas funcionalidades pueden estar limitadas. Por favor, recarga la página si persisten los problemas.");
             }
         });
@@ -107,7 +115,7 @@ async function initializeFirebase() {
         console.error("Error general al inicializar Firebase o autenticar:", error);
         showModal(`Error crítico al iniciar Firebase: ${error.message}. La aplicación puede no funcionar correctamente.`);
     } finally {
-        // Asegurarse de que la UI siempre se actualice después del intento de inicialización
+        // Ensure UI always updates after initialization attempt
         updateUI();
     }
 }
@@ -186,7 +194,7 @@ async function addParticipant(mode, name) {
     const participantsRef = collection(db, `artifacts/${appId}/users/${userId}/${mode}Participants`);
     try {
         await addDoc(participantsRef, { name: name.trim() });
-        document.getElementById(`${mode}ParticipantName`).value = ''; // Limpiar input
+        document.getElementById(`${mode}ParticipantName`).value = ''; // Clear input
     } catch (e) {
         console.error("Error añadiendo participante:", e);
         showModal(`Error al añadir participante: ${e.message}`);
@@ -223,7 +231,7 @@ function renderParticipants(mode) {
 
     const participants = mode === 'general' ? generalParticipants : travelParticipants;
 
-    // Limpiar listas anteriores
+    // Clear previous lists
     participantsList.innerHTML = '';
     payerSelect.innerHTML = '<option value="">Selecciona un participante</option>';
     involvedCheckboxes.innerHTML = '';
@@ -233,19 +241,19 @@ function renderParticipants(mode) {
     }
 
     participants.forEach(p => {
-        // Renderizar en la lista de participantes
+        // Render in participants list
         const participantTag = document.createElement('span');
         participantTag.className = 'bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium flex items-center gap-2';
         participantTag.innerHTML = `${p.name} <button class="text-blue-600 hover:text-blue-800 font-bold" onclick="deleteParticipant('${mode}', '${p.id}')">&times;</button>`;
         participantsList.appendChild(participantTag);
 
-        // Rellenar selector de "Quién Pagó"
+        // Populate "Who Paid" selector
         const payerOption = document.createElement('option');
         payerOption.value = p.name;
         payerOption.textContent = p.name;
         payerSelect.appendChild(payerOption);
 
-        // Rellenar checkboxes de "Quiénes Participan"
+        // Populate "Who Participates" checkboxes
         const checkboxDiv = document.createElement('div');
         checkboxDiv.className = 'flex items-center';
         checkboxDiv.innerHTML = `
@@ -255,7 +263,7 @@ function renderParticipants(mode) {
         involvedCheckboxes.appendChild(checkboxDiv);
     });
 
-    // Añadir el checkbox "Seleccionar todos" solo para el modo general
+    // Add "Select All" checkbox only for general mode
     if (mode === 'general') {
         const selectAllDiv = document.createElement('div');
         selectAllDiv.className = 'flex items-center mt-2';
@@ -263,7 +271,7 @@ function renderParticipants(mode) {
             <input type="checkbox" id="generalSelectAllParticipants" class="form-checkbox h-5 w-5 text-blue-600 rounded">
             <label for="generalSelectAllParticipants" class="ml-2 text-gray-700 font-semibold">Seleccionar todos</label>
         `;
-        involvedCheckboxes.prepend(selectAllDiv); // Añadir al principio
+        involvedCheckboxes.prepend(selectAllDiv); // Add to the beginning
 
         document.getElementById('generalSelectAllParticipants').addEventListener('change', (event) => {
             const isChecked = event.target.checked;
@@ -289,21 +297,21 @@ async function addExpense(mode, expenseData) {
     const expensesRef = collection(db, `artifacts/${appId}/users/${userId}/${mode}Expenses`);
     try {
         if (editingExpenseId) {
-            // Si estamos editando, actualizamos el documento existente
+            // If editing, update the existing document
             const expenseDocRef = doc(db, `artifacts/${appId}/users/${userId}/${mode}Expenses`, editingExpenseId);
             await updateDoc(expenseDocRef, expenseData);
-            editingExpenseId = null; // Resetear el ID de edición
-            document.getElementById(`${mode}AddExpenseBtn`).textContent = 'Añadir Gasto'; // Restaurar texto del botón
+            editingExpenseId = null; // Reset editing ID
+            document.getElementById(`${mode}AddExpenseBtn`).textContent = 'Añadir Gasto'; // Restore button text
         } else {
-            // Si no estamos editando, añadimos un nuevo documento
+            // If not editing, add a new document
             await addDoc(expensesRef, expenseData);
         }
-        document.getElementById(`${mode}ExpenseForm`).reset(); // Limpiar formulario
-        // Desmarcar todos los checkboxes después de añadir/editar el gasto
+        document.getElementById(`${mode}ExpenseForm`).reset(); // Clear form
+        // Uncheck all checkboxes after adding/editing expense
         document.querySelectorAll(`#${mode}InvolvedParticipantsCheckboxes input[name="${mode}Involved"]`).forEach(cb => {
             cb.checked = false;
         });
-        // Desmarcar el checkbox "Seleccionar todos" si existe
+        // Uncheck "Select All" checkbox if it exists
         const selectAllCheckbox = document.getElementById(`${mode}SelectAllParticipants`);
         if (selectAllCheckbox) {
             selectAllCheckbox.checked = false;
@@ -327,16 +335,16 @@ function editExpense(mode, id) {
         editingExpenseId = id;
         document.getElementById(`${mode}AddExpenseBtn`).textContent = 'Guardar Cambios';
 
-        // Cargar los datos en el formulario
+        // Load data into the form
         document.getElementById(`${mode}ExpenseItem`).value = expenseToEdit.item;
         document.getElementById(`${mode}ExpensePrice`).value = expenseToEdit.price;
         document.getElementById(`${mode}ExpensePayer`).value = expenseToEdit.payer;
 
-        // Desmarcar todos los checkboxes primero
+        // Uncheck all checkboxes first
         document.querySelectorAll(`#${mode}InvolvedParticipantsCheckboxes input[name="${mode}Involved"]`).forEach(cb => {
             cb.checked = false;
         });
-        // Marcar los checkboxes de los participantes involucrados
+        // Check checkboxes for involved participants
         expenseToEdit.involvedParticipants.forEach(participantName => {
             const checkbox = document.querySelector(`#${mode}InvolvedParticipantsCheckboxes input[value="${participantName}"]`);
             if (checkbox) {
@@ -344,10 +352,10 @@ function editExpense(mode, id) {
             }
         });
 
-        // Para el modo viaje, seleccionar la moneda
+        // For travel mode, select currency
         if (mode === 'travel') {
             document.querySelector(`input[name="travelCurrency"][value="${expenseToEdit.currency}"]`).checked = true;
-            document.getElementById('travelExpenseDate').value = expenseToEdit.date; // Cargar fecha también
+            document.getElementById('travelExpenseDate').value = expenseToEdit.date; // Load date as well
         }
     }
 }
@@ -384,7 +392,7 @@ function renderExpenses(mode) {
 
     const expenses = mode === 'general' ? generalExpenses : travelExpenses;
 
-    expensesTableBody.innerHTML = ''; // Limpiar tabla
+    expensesTableBody.innerHTML = ''; // Clear table
 
     if (expenses.length === 0) {
         noExpensesMessage.classList.remove('hidden');
@@ -393,7 +401,7 @@ function renderExpenses(mode) {
         noExpensesMessage.classList.add('hidden');
     }
 
-    // Actualizar encabezado de la tabla según el modo
+    // Update table header based on mode
     if (mode === 'general') {
         expensesTableHeader.innerHTML = `
             <tr>
@@ -422,12 +430,12 @@ function renderExpenses(mode) {
 
     expenses.forEach(expense => {
         const row = expensesTableBody.insertRow();
-        row.className = 'hover:bg-gray-50 cursor-pointer'; // Añadir cursor-pointer
-        row.onclick = () => editExpense(mode, expense.id); // Añadir evento de clic para editar
+        row.className = 'hover:bg-gray-50 cursor-pointer'; // Add cursor-pointer
+        row.onclick = () => editExpense(mode, expense.id); // Add click event for editing
 
-        // Determinar qué columnas mostrar
+        // Determine which columns to show
         let cells = '';
-        if (mode === 'travel') { // Solo mostrar fecha en modo viaje
+        if (mode === 'travel') { // Only show date in travel mode
             cells += `<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${expense.date}</td>`;
         }
 
@@ -455,8 +463,8 @@ function renderExpenses(mode) {
  * @returns {Object} - Objeto con totalExpenses, averageExpense y balanceList.
  */
 function calculateBalances(expenses, participants, exchangeRate) {
-    // Mapa para almacenar las deudas directas entre cada par de personas
-    // directDebts.get(deudor).get(acreedor) = cantidad_adeudada
+    // Map to store direct debts between each pair of people
+    // directDebts.get(debtor).get(creditor) = amount_owed
     const directDebts = new Map();
     participants.forEach(p => {
         directDebts.set(p.name, new Map());
@@ -464,13 +472,13 @@ function calculateBalances(expenses, participants, exchangeRate) {
 
     let totalExpenses = 0;
 
-    // 1. Calcular las deudas iniciales por cada gasto
+    // 1. Calculate initial debts for each expense
     expenses.forEach(expense => {
         const payer = expense.payer;
         const involvedParticipants = expense.involvedParticipants;
         let price = parseFloat(expense.price);
 
-        // Convertir USD a ARS si es necesario
+        // Convert USD to ARS if necessary
         if (expense.currency === 'USD' && exchangeRate) {
             price *= exchangeRate;
         }
@@ -480,26 +488,26 @@ function calculateBalances(expenses, participants, exchangeRate) {
 
         involvedParticipants.forEach(participant => {
             if (participant !== payer) {
-                // El participante debe al pagador
+                // Participant owes the payer
                 const currentDebt = directDebts.get(participant).get(payer) || 0;
                 directDebts.get(participant).set(payer, currentDebt + sharePerPerson);
             }
         });
     });
 
-    // 2. Neteo de deudas entre pares de personas
+    // 2. Netting debts between pairs of people
     const finalBalances = [];
-    const processedPairs = new Set(); // Para evitar procesar A-B y luego B-A
+    const processedPairs = new Set(); // To avoid processing A-B and then B-A
 
     participants.forEach(p1 => {
         participants.forEach(p2 => {
-            if (p1.name === p2.name) return; // No se deben a sí mismos
+            if (p1.name === p2.name) return; // They don't owe themselves
 
-            // Crear una clave única para el par, independientemente del orden
+            // Create a unique key for the pair, regardless of order
             const pairKey = [p1.name, p2.name].sort().join('_');
 
             if (processedPairs.has(pairKey)) {
-                return; // Ya procesado este par
+                return; // Already processed this pair
             }
 
             let p1OwesP2 = directDebts.get(p1.name)?.get(p2.name) || 0;
@@ -507,12 +515,12 @@ function calculateBalances(expenses, participants, exchangeRate) {
 
             if (p1OwesP2 > p2OwesP1) {
                 const netAmount = p1OwesP2 - p2OwesP1;
-                if (netAmount > 0.01) { // Solo añadir si la deuda es significativa
+                if (netAmount > 0.01) { // Only add if debt is significant
                     finalBalances.push(`${p1.name} debe ARS ${netAmount.toFixed(2)} a ${p2.name}.`);
                 }
             } else if (p2OwesP1 > p1OwesP2) {
                 const netAmount = p2OwesP1 - p1OwesP2;
-                if (netAmount > 0.01) { // Solo añadir si la deuda es significativa
+                if (netAmount > 0.01) { // Only add if debt is significant
                     finalBalances.push(`${p2.name} debe ARS ${netAmount.toFixed(2)} a ${p1.name}.`);
                 }
             }
@@ -548,7 +556,7 @@ function updateSummary(mode) {
     totalExpensesSpan.textContent = `ARS ${totalExpenses.toFixed(2)}`;
     averageExpenseSpan.textContent = `ARS ${averageExpense.toFixed(2)}`;
 
-    balanceListUl.innerHTML = ''; // Limpiar lista
+    balanceListUl.innerHTML = ''; // Clear list
 
     if (balanceList.length === 0) {
         noBalancesMessage.classList.remove('hidden');
@@ -575,20 +583,20 @@ function switchMode(mode) {
         generalSection.classList.add('hidden');
         travelModeBtn.classList.add('active');
         generalModeBtn.classList.remove('active');
-        exchangeRateContainer.classList.remove('hidden'); // Mostrar tipo de cambio
-        fetchExchangeRate(); // Cargar tipo de cambio al cambiar a modo viaje
+        exchangeRateContainer.classList.remove('hidden'); // Show exchange rate
+        fetchExchangeRate(); // Load exchange rate when switching to travel mode
     } else {
         travelSection.classList.add('hidden');
         generalSection.classList.remove('hidden');
         travelModeBtn.classList.remove('active');
         generalModeBtn.classList.add('active');
-        exchangeRateContainer.classList.add('hidden'); // Ocultar tipo de cambio
+        exchangeRateContainer.classList.add('hidden'); // Hide exchange rate
     }
-    updateUI(); // Actualizar la UI para el nuevo modo
+    updateUI(); // Update UI for the new mode
 }
 
 /**
- * Actualiza toda la interfaz de usuario.
+ * Updates the entire user interface.
  */
 function updateUI() {
     renderParticipants(currentMode);
@@ -597,11 +605,11 @@ function updateUI() {
 }
 
 /**
- * Obtiene el tipo de cambio USD a ARS desde una API externa.
+ * Fetches the USD to ARS exchange rate from an external API.
  */
 async function fetchExchangeRate() {
     exchangeRateDisplay.textContent = 'Cargando...';
-    const apiKey = '44426f5c88d04ec487673e15502bdfb2'; // Clave API proporcionada por el usuario
+    const apiKey = '44426f5c88d04ec487673e15502bdfb2'; // API Key provided by the user
     const apiUrl = `https://v6.exchangerate-api.com/v6/${apiKey}/latest/USD`;
 
     try {
@@ -613,30 +621,30 @@ async function fetchExchangeRate() {
         if (data.result === 'success' && data.conversion_rates && data.conversion_rates.ARS) {
             exchangeRate = data.conversion_rates.ARS;
             exchangeRateDisplay.textContent = `ARS ${exchangeRate.toFixed(2)}`;
-            updateSummary('travel'); // Recalcular saldos de viaje con el nuevo tipo de cambio
+            updateSummary('travel'); // Recalculate travel balances with the new exchange rate
         } else {
-            throw new Error("Datos de tipo de cambio no válidos.");
+            throw new Error("Invalid exchange rate data.");
         }
     } catch (error) {
         console.error("Error fetching exchange rate:", error);
         exchangeRateDisplay.textContent = 'Error al cargar';
         showModal("Error al cargar el tipo de cambio. Usando valor predeterminado.");
-        exchangeRate = 1000; // Valor predeterminado en caso de error
-        updateSummary('travel'); // Recalcular saldos de viaje con el valor predeterminado
+        exchangeRate = 1000; // Default value in case of error
+        updateSummary('travel'); // Recalculate travel balances with the default value
     }
 }
 
 // --- Event Listeners ---
 
 window.onload = () => {
-    initializeFirebase(); // Inicializa Firebase al cargar la página
-    switchMode('general'); // Inicia en modo "Gastos Generales" por defecto
+    initializeFirebase(); // Initialize Firebase on page load
+    switchMode('general'); // Start in "General Expenses" mode by default
 
-    // Event listeners para los botones de modo
+    // Event listeners for mode buttons
     travelModeBtn.addEventListener('click', () => switchMode('travel'));
     generalModeBtn.addEventListener('click', () => switchMode('general'));
 
-    // Event listeners para añadir participantes
+    // Event listeners for adding participants
     document.getElementById('addGeneralParticipantBtn').addEventListener('click', () => {
         const name = document.getElementById('generalParticipantName').value;
         addParticipant('general', name);
@@ -646,13 +654,13 @@ window.onload = () => {
         addParticipant('travel', name);
     });
 
-    // Event listeners para añadir gastos
+    // Event listeners for adding expenses
     document.getElementById('generalExpenseForm').addEventListener('submit', (e) => {
         e.preventDefault();
         const expenseData = {
             item: document.getElementById('generalExpenseItem').value,
             price: parseFloat(document.getElementById('generalExpensePrice').value),
-            currency: 'ARS', // Fijo para gastos generales
+            currency: 'ARS', // Fixed for general expenses
             payer: document.getElementById('generalExpensePayer').value,
             involvedParticipants: Array.from(document.querySelectorAll('#generalInvolvedParticipantsCheckboxes input[name="generalInvolved"]:checked')).map(cb => cb.value)
         };
@@ -688,7 +696,7 @@ window.onload = () => {
         addExpense('travel', expenseData);
     });
 
-    // Event listeners para el modal
+    // Event listeners for the modal
     modalOkButton.addEventListener('click', hideModal);
     closeButton.addEventListener('click', hideModal);
     window.addEventListener('click', (event) => {
@@ -697,8 +705,8 @@ window.onload = () => {
         }
     });
 
-    // Exponer funciones globales para el HTML (onclick)
+    // Expose global functions for HTML (onclick)
     window.deleteParticipant = deleteParticipant;
     window.deleteExpense = deleteExpense;
-    window.editExpense = editExpense; // Exponer la función editExpense
+    window.editExpense = editExpense; // Expose editExpense function
 };
