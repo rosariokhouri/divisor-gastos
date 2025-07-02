@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, collection, onSnapshot, addDoc, deleteDoc, doc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- Variables Globales ---
@@ -7,7 +7,21 @@ let app;
 let db;
 let auth;
 let userId;
-let appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id'; // Asegurar que appId siempre esté definido
+
+// Hardcoded Firebase configuration (provided by the user)
+const firebaseConfig = {
+    apiKey: "AIzaSyAeIKWGArwd2gORhhT0UL0m7Ok4oyNXdiE",
+    authDomain: "divisor-gastos-8777d.firebaseapp.com",
+    projectId: "divisor-gastos-8777d",
+    storageBucket: "divisor-gastos-8777d.firebasestorage.app",
+    messagingSenderId: "266285332356",
+    appId: "1:266285332356:web:c3d616a7c7dc48a90acfd1",
+    measurementId: "G-5ZRS955TKY"
+};
+
+// Use projectId from the hardcoded config for appId
+let appId = firebaseConfig.projectId; 
+
 let currentMode = 'general'; // 'general' o 'travel'
 let exchangeRate = 1; // Valor inicial, se actualizará con la API
 let editingExpenseId = null; // Para almacenar el ID del gasto que se está editando
@@ -57,50 +71,19 @@ function hideModal() {
  */
 async function initializeFirebase() {
     try {
-        // Log para depuración: Ver el valor de __firebase_config
-        console.log("Valor de __firebase_config (raw):", typeof __firebase_config !== 'undefined' ? __firebase_config : 'undefined');
-
-        let firebaseConfig = {};
-        try {
-            const rawConfig = typeof __firebase_config !== 'undefined' ? __firebase_config : '{}';
-            firebaseConfig = JSON.parse(rawConfig);
-        } catch (e) {
-            console.error("Error al parsear __firebase_config:", e);
-            showModal("Error: La configuración de Firebase no es un JSON válido. Por favor, contacta al soporte.");
-            return; // Detener la inicialización si la configuración es inválida
-        }
-
-        if (Object.keys(firebaseConfig).length === 0) {
-            console.error("Firebase config está vacío después de parsear.");
-            showModal("Error: Firebase no está configurado correctamente. La configuración está vacía. Por favor, contacta al soporte.");
-            return; // Detener la inicialización si la configuración está vacía
-        }
+        // No es necesario parsear __firebase_config ya que está hardcodeado
+        // No es necesario verificar si firebaseConfig está vacío, ya que lo hemos definido
         
-        console.log("Firebase config (parsed):", firebaseConfig);
+        console.log("Firebase config (hardcoded):", firebaseConfig);
 
         app = initializeApp(firebaseConfig);
         db = getFirestore(app);
         auth = getAuth(app);
 
-        // Log para depuración: Ver el valor de __initial_auth_token
-        console.log("Valor de __initial_auth_token:", typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : 'undefined');
-
-        // Intenta iniciar sesión con el token personalizado si está disponible
-        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-            try {
-                await signInWithCustomToken(auth, __initial_auth_token);
-                console.log("Autenticación con token personalizado exitosa.");
-            } catch (authError) {
-                console.error("Error al autenticar con token personalizado:", authError);
-                showModal(`Error de autenticación con token: ${authError.message}. Intentando iniciar sesión anónimamente.`);
-                await signInAnonymously(auth); // Fallback a anónimo si el token falla
-            }
-        } else {
-            // Si no hay token, inicia sesión anónimamente
-            await signInAnonymously(auth);
-            console.log("Autenticación anónima exitosa.");
-        }
-
+        // Ya no dependemos de __initial_auth_token, siempre intentamos autenticación anónima
+        await signInAnonymously(auth);
+        console.log("Autenticación anónima exitosa.");
+        
         // Listener para el estado de autenticación
         onAuthStateChanged(auth, (user) => {
             if (user) {
@@ -158,7 +141,7 @@ function setupFirestoreListeners() {
         console.log("Gastos generales cargados:", generalExpenses.length);
     }, (error) => {
         console.error("Error fetching general expenses:", error);
-        showModal(`Error al cargar gastos generales: ${e.message}`);
+        showModal(`Error al cargar gastos generales: ${error.message}`);
     });
 
     // Listener para participantes de viaje
