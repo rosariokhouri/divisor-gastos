@@ -1,58 +1,65 @@
-// Global Arrays for Expenses and Participants
-let participants = [];
-let travelExpenses = [];
-let generalExpenses = [];
+// Data storage for both modes
+let allExpenses = {
+    travel: [],
+    general: []
+};
+let allParticipants = {
+    travel: [],
+    general: []
+};
+let currentMode = 'general'; // Default mode changed to 'general'
 
-// Exchange Rate Variable
-let currentUsdToArsRate = 1000; // Default value if API fails
-const defaultUsdToArsRate = 1000; // Default fallback
+// Variable para almacenar el tipo de cambio USD a ARS
+let currentUsdToArsRate = 1000; // Valor por defecto si la API falla o no se carga
+const defaultUsdToArsRate = 1000; // Valor por defecto si la API falla o no se carga
 
-// --- DOM Element References ---
-// Participants Section (Shared)
-const participantNameInput = document.getElementById('participantName');
-const addParticipantBtn = document.getElementById('addParticipantBtn');
-const participantsListDiv = document.getElementById('participantsList');
+// --- References to DOM elements ---
+// Navigation buttons
+const travelModeBtn = document.getElementById('travelModeBtn');
+const generalModeBtn = document.getElementById('generalModeBtn');
+const travelSection = document.getElementById('travelSection');
+const generalSection = document.getElementById('generalSection');
+const exchangeRateContainer = document.getElementById('exchangeRateContainer');
 
-// Travel Expenses Section
-const travelExpenseForm = document.getElementById('travelExpenseForm');
-const travelExpenseDateInput = document.getElementById('travelExpenseDate');
+// Travel Mode Elements
+const travelParticipantNameInput = document.getElementById('travelParticipantName');
+const addTravelParticipantBtn = document.getElementById('addTravelParticipantBtn');
+const travelParticipantsListDiv = document.getElementById('travelParticipantsList');
 const travelExpensePayerSelect = document.getElementById('travelExpensePayer');
 const travelInvolvedParticipantsCheckboxesDiv = document.getElementById('travelInvolvedParticipantsCheckboxes');
+const travelExpenseForm = document.getElementById('travelExpenseForm');
 const travelExpensesTableBody = document.getElementById('travelExpensesTableBody');
 const noTravelExpensesMessage = document.getElementById('noTravelExpensesMessage');
-const totalTravelExpensesSpan = document.getElementById('totalTravelExpenses');
-const averageTravelExpenseSpan = document.getElementById('averageTravelExpense');
+const travelTotalExpensesSpan = document.getElementById('travelTotalExpenses');
+const travelAverageExpenseSpan = document.getElementById('travelAverageExpense');
 const travelBalanceList = document.getElementById('travelBalanceList');
 const noTravelBalancesMessage = document.getElementById('noTravelBalancesMessage');
-const exchangeRateDisplay = document.getElementById('exchangeRateDisplay');
 
-// General Expenses Section
-const generalExpenseForm = document.getElementById('generalExpenseForm');
+// General Mode Elements
+const generalParticipantNameInput = document.getElementById('generalParticipantName');
+const addGeneralParticipantBtn = document.getElementById('addGeneralParticipantBtn');
+const generalParticipantsListDiv = document.getElementById('generalParticipantsList');
 const generalExpensePayerSelect = document.getElementById('generalExpensePayer');
 const generalInvolvedParticipantsCheckboxesDiv = document.getElementById('generalInvolvedParticipantsCheckboxes');
+const generalExpenseForm = document.getElementById('generalExpenseForm');
 const generalExpensesTableBody = document.getElementById('generalExpensesTableBody');
 const noGeneralExpensesMessage = document.getElementById('noGeneralExpensesMessage');
-const totalGeneralExpensesSpan = document.getElementById('totalGeneralExpenses');
-const averageGeneralExpenseSpan = document.getElementById('averageGeneralExpense');
+const generalTotalExpensesSpan = document.getElementById('generalTotalExpenses');
+const generalAverageExpenseSpan = document.getElementById('generalAverageExpense');
 const generalBalanceList = document.getElementById('generalBalanceList');
 const noGeneralBalancesMessage = document.getElementById('noGeneralBalancesMessage');
 
-// Modal Elements
+// Common Elements
+const exchangeRateDisplay = document.getElementById('exchangeRateDisplay');
 const myModal = document.getElementById('myModal');
 const modalMessage = document.getElementById('modalMessage');
 const closeButton = document.querySelector('.close-button');
 const modalOkButton = document.getElementById('modalOkButton');
 
-// Tab Elements
-const travelExpensesTabBtn = document.getElementById('travel-expenses-tab');
-const generalExpensesTabBtn = document.getElementById('general-expenses-tab');
-const travelExpensesContent = document.getElementById('travel-expenses');
-const generalExpensesContent = document.getElementById('general-expenses');
-
 // --- Modal Functions ---
 function showModal(message) {
     modalMessage.textContent = message;
-    myModal.style.display = 'flex'; // Use flex to center
+    myModal.style.display = 'flex';
 }
 
 closeButton.onclick = function() {
@@ -67,55 +74,74 @@ window.onclick = function(event) {
     }
 }
 
-// --- Tab Functionality ---
-function activateTab(activeTabBtn, activeContent, inactiveTabBtn, inactiveContent) {
-    // Deactivate current tab
-    inactiveTabBtn.classList.remove('text-blue-600', 'border-blue-600');
-    inactiveTabBtn.classList.add('border-transparent', 'hover:text-gray-600', 'hover:border-gray-300');
-    inactiveContent.classList.add('hidden');
+// --- Mode Switching Logic ---
+function switchMode(mode) {
+    currentMode = mode;
 
-    // Activate new tab
-    activeTabBtn.classList.add('text-blue-600', 'border-blue-600');
-    activeTabBtn.classList.remove('border-transparent', 'hover:text-gray-600', 'hover:border-gray-300');
-    activeContent.classList.remove('hidden');
-
-    // Update summaries when switching tabs
-    updateTravelSummary();
-    updateGeneralSummary();
+    // Update active button styles
+    travelModeBtn.classList.remove('active');
+    generalModeBtn.classList.remove('active');
+    if (mode === 'travel') {
+        travelModeBtn.classList.add('active');
+        travelSection.classList.remove('hidden');
+        generalSection.classList.add('hidden');
+        exchangeRateContainer.classList.remove('hidden'); // Show exchange rate for travel mode
+    } else { // general mode
+        generalModeBtn.classList.add('active');
+        travelSection.classList.add('hidden');
+        generalSection.classList.remove('hidden');
+        exchangeRateContainer.classList.add('hidden'); // Hide exchange rate for general mode
+    }
+    renderUI(); // Re-render UI for the new mode
 }
 
-travelExpensesTabBtn.addEventListener('click', () => {
-    activateTab(travelExpensesTabBtn, travelExpensesContent, generalExpensesTabBtn, generalExpensesContent);
-});
+travelModeBtn.addEventListener('click', () => switchMode('travel'));
+generalModeBtn.addEventListener('click', () => switchMode('general'));
 
-generalExpensesTabBtn.addEventListener('click', () => {
-    activateTab(generalExpensesTabBtn, generalExpensesContent, travelExpensesTabBtn, travelExpensesContent);
-});
+// --- Helper Functions to get/set data based on currentMode ---
+function getParticipants() {
+    return allParticipants[currentMode];
+}
 
-// --- Participant Management (Shared) ---
-addParticipantBtn.addEventListener('click', () => {
-    const name = participantNameInput.value.trim();
-    if (name && !participants.includes(name)) {
-        participants.push(name);
-        participantNameInput.value = '';
+function setParticipants(newParticipants) {
+    allParticipants[currentMode] = newParticipants;
+}
+
+function getExpenses() {
+    return allExpenses[currentMode];
+}
+
+function setExpenses(newExpenses) {
+    allExpenses[currentMode] = newExpenses;
+}
+
+// --- Participant Management ---
+function addParticipant(nameInput, participantsListDiv, addBtn) {
+    const name = nameInput.value.trim();
+    let currentParticipants = getParticipants();
+    if (name && !currentParticipants.includes(name)) {
+        currentParticipants.push(name);
+        setParticipants(currentParticipants);
+        nameInput.value = '';
         renderParticipants();
-        updatePayerSelects();
+        updatePayerSelect();
         updateInvolvedParticipantsCheckboxes();
-        updateTravelSummary(); // Update summaries when a participant is added
-        updateGeneralSummary();
-    } else if (name && participants.includes(name)) {
+        updateSummary();
+    } else if (name && currentParticipants.includes(name)) {
         showModal('El participante "' + name + '" ya existe.');
     } else {
         showModal('Por favor, ingresa un nombre para el participante.');
     }
-});
+}
 
 function renderParticipants() {
-    participantsListDiv.innerHTML = '';
-    if (participants.length === 0) {
-        participantsListDiv.innerHTML = '<p class="text-gray-500">Aún no hay participantes. Añade algunos para empezar.</p>';
+    const currentParticipants = getParticipants();
+    let targetListDiv = currentMode === 'travel' ? travelParticipantsListDiv : generalParticipantsListDiv;
+    targetListDiv.innerHTML = '';
+    if (currentParticipants.length === 0) {
+        targetListDiv.innerHTML = '<p class="text-gray-500">Aún no hay participantes. Añade algunos para empezar.</p>';
     } else {
-        participants.forEach(participant => {
+        currentParticipants.forEach(participant => {
             const span = document.createElement('span');
             span.className = 'bg-blue-100 text-blue-800 text-sm font-medium px-3 py-1 rounded-full flex items-center gap-2';
             span.textContent = participant;
@@ -126,84 +152,91 @@ function renderParticipants() {
             removeBtn.onclick = () => removeParticipant(participant);
 
             span.appendChild(removeBtn);
-            participantsListDiv.appendChild(span);
+            targetListDiv.appendChild(span);
         });
     }
 }
 
 function removeParticipant(nameToRemove) {
-    // Check if the participant has associated expenses in either list
-    const hasTravelExpenses = travelExpenses.some(expense =>
-        expense.payer === nameToRemove || expense.involvedParticipants.includes(nameToRemove)
-    );
-    const hasGeneralExpenses = generalExpenses.some(expense =>
+    const currentExpenses = getExpenses();
+    const currentParticipants = getParticipants();
+
+    const hasExpenses = currentExpenses.some(expense =>
         expense.payer === nameToRemove || expense.involvedParticipants.includes(nameToRemove)
     );
 
-    if (hasTravelExpenses || hasGeneralExpenses) {
+    if (hasExpenses) {
         showModal(`No se puede eliminar a "${nameToRemove}" porque tiene gastos asociados. Primero elimina sus gastos o quítalo de ellos.`);
         return;
     }
 
-    participants = participants.filter(p => p !== nameToRemove);
+    setParticipants(currentParticipants.filter(p => p !== nameToRemove));
     renderParticipants();
-    updatePayerSelects();
+    updatePayerSelect();
     updateInvolvedParticipantsCheckboxes();
-    updateTravelSummary();
-    updateGeneralSummary();
+    updateSummary();
 }
 
-function updatePayerSelects() {
-    const selects = [travelExpensePayerSelect, generalExpensePayerSelect];
-    selects.forEach(select => {
-        select.innerHTML = '<option value="">Selecciona un participante</option>';
-        participants.forEach(participant => {
-            const option = document.createElement('option');
-            option.value = participant;
-            option.textContent = participant;
-            select.appendChild(option);
-        });
+function updatePayerSelect() {
+    const currentParticipants = getParticipants();
+    let targetSelect = currentMode === 'travel' ? travelExpensePayerSelect : generalExpensePayerSelect;
+    targetSelect.innerHTML = '<option value="">Selecciona un participante</option>';
+    currentParticipants.forEach(participant => {
+        const option = document.createElement('option');
+        option.value = participant;
+        option.textContent = participant;
+        targetSelect.appendChild(option);
     });
 }
 
 function updateInvolvedParticipantsCheckboxes() {
-    const checkboxDivs = [travelInvolvedParticipantsCheckboxesDiv, generalInvolvedParticipantsCheckboxesDiv];
-
-    checkboxDivs.forEach(div => {
-        div.innerHTML = '';
-        if (participants.length === 0) {
-            div.innerHTML = '<p class="text-gray-500">Añade participantes para poder seleccionarlos aquí.</p>';
-        } else {
-            participants.forEach(participant => {
-                const label = document.createElement('label');
-                label.className = 'inline-flex items-center';
-                label.innerHTML = `
-                    <input type="checkbox" name="involvedParticipant" value="${participant}"
-                           class="form-checkbox h-5 w-5 text-blue-600 rounded">
-                    <span class="ml-2 text-gray-700">${participant}</span>
-                `;
-                div.appendChild(label);
-            });
-        }
-    });
+    const currentParticipants = getParticipants();
+    let targetCheckboxesDiv = currentMode === 'travel' ? travelInvolvedParticipantsCheckboxesDiv : generalInvolvedParticipantsCheckboxesDiv;
+    targetCheckboxesDiv.innerHTML = '';
+    if (currentParticipants.length === 0) {
+        targetCheckboxesDiv.innerHTML = '<p class="text-gray-500">Añade participantes para poder seleccionarlos aquí.</p>';
+    } else {
+        currentParticipants.forEach(participant => {
+            const label = document.createElement('label');
+            label.className = 'inline-flex items-center';
+            label.innerHTML = `
+                <input type="checkbox" name="involvedParticipant" value="${participant}"
+                       class="form-checkbox h-5 w-5 text-blue-600 rounded">
+                <span class="ml-2 text-gray-700">${participant}</span>
+            `;
+            targetCheckboxesDiv.appendChild(label);
+        });
+    }
 }
 
-// --- Travel Expense Management ---
-travelExpenseForm.addEventListener('submit', (e) => {
-    e.preventDefault();
+// --- Expense Management ---
+function addExpense(event) {
+    event.preventDefault();
 
-    if (participants.length === 0) {
+    const currentParticipants = getParticipants();
+    if (currentParticipants.length === 0) {
         showModal('Por favor, añade al menos un participante antes de añadir gastos.');
         return;
     }
 
-    const date = travelExpenseDateInput.value;
-    const item = document.getElementById('travelExpenseItem').value;
-    const price = parseFloat(document.getElementById('travelExpensePrice').value);
-    const currency = document.querySelector('input[name="travelCurrency"]:checked').value;
-    const payer = travelExpensePayerSelect.value;
+    let date, item, price, currency, payer, selectedInvolvedCheckboxes;
 
-    const selectedInvolvedCheckboxes = travelInvolvedParticipantsCheckboxesDiv.querySelectorAll('input[name="involvedParticipant"]:checked');
+    if (currentMode === 'travel') {
+        date = document.getElementById('travelExpenseDate').value;
+        item = document.getElementById('travelExpenseItem').value;
+        price = parseFloat(document.getElementById('travelExpensePrice').value);
+        currency = document.querySelector('input[name="travelCurrency"]:checked').value;
+        payer = document.getElementById('travelExpensePayer').value;
+        selectedInvolvedCheckboxes = document.querySelectorAll('#travelInvolvedParticipantsCheckboxes input[name="involvedParticipant"]:checked');
+    } else { // general mode
+        date = document.getElementById('generalExpenseDate').value;
+        item = document.getElementById('generalExpenseItem').value;
+        price = parseFloat(document.getElementById('generalExpensePrice').value);
+        currency = 'ARS'; // Fixed for general expenses
+        payer = document.getElementById('generalExpensePayer').value;
+        selectedInvolvedCheckboxes = document.querySelectorAll('#generalInvolvedParticipantsCheckboxes input[name="involvedParticipant"]:checked');
+    }
+
     const involvedParticipants = Array.from(selectedInvolvedCheckboxes).map(cb => cb.value);
 
     if (!payer) {
@@ -217,41 +250,52 @@ travelExpenseForm.addEventListener('submit', (e) => {
     }
 
     const newExpense = {
-        id: Date.now(), // Unique ID
-        type: 'travel',
+        id: Date.now(), // Unique ID for the expense
         date,
         item,
         price,
         currency,
         payer,
-        involvedParticipants
+        involvedParticipants // Store who is involved in this specific expense
     };
 
-    travelExpenses.push(newExpense);
-    travelExpenseForm.reset();
-    updateInvolvedParticipantsCheckboxes(); // Re-render checkboxes to clear selections
-    renderTravelExpenses();
-    updateTravelSummary();
-});
+    let currentExpenses = getExpenses();
+    currentExpenses.push(newExpense);
+    setExpenses(currentExpenses);
 
-function renderTravelExpenses() {
-    travelExpensesTableBody.innerHTML = '';
-    if (travelExpenses.length === 0) {
-        noTravelExpensesMessage.classList.remove('hidden');
+    // Reset form and re-render UI
+    if (currentMode === 'travel') {
+        travelExpenseForm.reset();
     } else {
-        noTravelExpensesMessage.classList.add('hidden');
-        travelExpenses.forEach(expense => {
-            const row = travelExpensesTableBody.insertRow();
+        generalExpenseForm.reset();
+    }
+    updateInvolvedParticipantsCheckboxes(); // Re-render checkboxes to clear selections
+    renderExpenses();
+    updateSummary();
+}
+
+function renderExpenses() {
+    const currentExpenses = getExpenses();
+    let targetTableBody = currentMode === 'travel' ? travelExpensesTableBody : generalExpensesTableBody;
+    let targetNoExpensesMessage = currentMode === 'travel' ? noTravelExpensesMessage : noGeneralExpensesMessage;
+
+    targetTableBody.innerHTML = '';
+    if (currentExpenses.length === 0) {
+        targetNoExpensesMessage.classList.remove('hidden');
+    } else {
+        targetNoExpensesMessage.classList.add('hidden');
+        currentExpenses.forEach(expense => {
+            const row = targetTableBody.insertRow();
             row.className = 'hover:bg-gray-50';
             row.innerHTML = `
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${expense.date}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${expense.item}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${expense.price.toFixed(2)}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${expense.currency}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${expense.payer}</td>
-                <td class="px-6 py-4 text-sm text-gray-900">${expense.involvedParticipants.join(', ')}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <button onclick="deleteTravelExpense(${expense.id})"
+                <td class="px-6 py-3 whitespace-nowrap text-sm text-gray-900">${expense.date}</td>
+                <td class="px-6 py-3 whitespace-nowrap text-sm text-gray-900">${expense.item}</td>
+                <td class="px-6 py-3 whitespace-nowrap text-sm text-gray-900">${expense.price.toFixed(2)}</td>
+                <td class="px-6 py-3 whitespace-nowrap text-sm text-gray-900">${expense.currency}</td>
+                <td class="px-6 py-3 whitespace-nowrap text-sm text-gray-900">${expense.payer}</td>
+                <td class="px-6 py-3 text-sm text-gray-900">${expense.involvedParticipants.join(', ')}</td>
+                <td class="px-6 py-3 whitespace-nowrap text-sm font-medium">
+                    <button onclick="deleteExpense(${expense.id})"
                             class="text-red-600 hover:text-red-900 transition duration-300 ease-in-out">
                         Eliminar
                     </button>
@@ -261,232 +305,12 @@ function renderTravelExpenses() {
     }
 }
 
-function deleteTravelExpense(id) {
-    travelExpenses = travelExpenses.filter(expense => expense.id !== id);
-    renderTravelExpenses();
-    updateTravelSummary();
+function deleteExpense(id) {
+    let currentExpenses = getExpenses();
+    setExpenses(currentExpenses.filter(expense => expense.id !== id));
+    renderExpenses();
+    updateSummary();
 }
-
-// --- General Expense Management ---
-generalExpenseForm.addEventListener('submit', (e) => {
-    e.preventDefault();
-
-    if (participants.length === 0) {
-        showModal('Por favor, añade al menos un participante antes de añadir gastos.');
-        return;
-    }
-
-    const item = document.getElementById('generalExpenseItem').value;
-    const price = parseFloat(document.getElementById('generalExpensePrice').value);
-    const payer = generalExpensePayerSelect.value;
-
-    const selectedInvolvedCheckboxes = generalInvolvedParticipantsCheckboxesDiv.querySelectorAll('input[name="involvedParticipant"]:checked');
-    const involvedParticipants = Array.from(selectedInvolvedCheckboxes).map(cb => cb.value);
-
-    if (!payer) {
-        showModal('Por favor, selecciona quién pagó el gasto.');
-        return;
-    }
-
-    if (involvedParticipants.length === 0) {
-        showModal('Por favor, selecciona al menos un participante involucrado en este gasto.');
-        return;
-    }
-
-    const newExpense = {
-        id: Date.now(), // Unique ID
-        type: 'general',
-        item,
-        price, // Price is always in ARS for general expenses
-        currency: 'ARS',
-        payer,
-        involvedParticipants
-    };
-
-    generalExpenses.push(newExpense);
-    generalExpenseForm.reset();
-    updateInvolvedParticipantsCheckboxes(); // Re-render checkboxes to clear selections
-    renderGeneralExpenses();
-    updateGeneralSummary();
-});
-
-function renderGeneralExpenses() {
-    generalExpensesTableBody.innerHTML = '';
-    if (generalExpenses.length === 0) {
-        noGeneralExpensesMessage.classList.remove('hidden');
-    } else {
-        noGeneralExpensesMessage.classList.add('hidden');
-        generalExpenses.forEach(expense => {
-            const row = generalExpensesTableBody.insertRow();
-            row.className = 'hover:bg-gray-50';
-            row.innerHTML = `
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${expense.item}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${expense.price.toFixed(2)} ARS</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${expense.payer}</td>
-                <td class="px-6 py-4 text-sm text-gray-900">${expense.involvedParticipants.join(', ')}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <button onclick="deleteGeneralExpense(${expense.id})"
-                            class="text-red-600 hover:text-red-900 transition duration-300 ease-in-out">
-                        Eliminar
-                    </button>
-                </td>
-            `;
-        });
-    }
-}
-
-function deleteGeneralExpense(id) {
-    generalExpenses = generalExpenses.filter(expense => expense.id !== id);
-    renderGeneralExpenses();
-    updateGeneralSummary();
-}
-
-// --- Summary Calculation Functions ---
-
-// Function to update the summary of Travel Expenses
-function updateTravelSummary() {
-    let totalExpensesARS = 0;
-    const participantBalances = {};
-
-    participants.forEach(p => {
-        participantBalances[p] = 0;
-    });
-
-    travelExpenses.forEach(expense => {
-        let priceInARS = expense.price;
-        if (expense.currency === 'USD') {
-            priceInARS *= currentUsdToArsRate;
-        }
-        totalExpensesARS += priceInARS;
-
-        const costPerInvolvedPerson = expense.involvedParticipants.length > 0 ? priceInARS / expense.involvedParticipants.length : 0;
-
-        expense.involvedParticipants.forEach(involvedP => {
-            participantBalances[involvedP] -= costPerInvolvedPerson;
-        });
-
-        participantBalances[expense.payer] += priceInARS;
-    });
-
-    totalTravelExpensesSpan.textContent = `ARS ${totalExpensesARS.toFixed(2)}`;
-
-    const numParticipants = participants.length;
-    const averageExpensePerPersonOverall = numParticipants > 0 ? totalExpensesARS / numParticipants : 0;
-    averageTravelExpenseSpan.textContent = `ARS ${averageExpensePerPersonOverall.toFixed(2)}`;
-
-    generateBalanceSettlement(participantBalances, travelBalanceList, noTravelBalancesMessage);
-}
-
-// Function to update the summary of General Expenses
-function updateGeneralSummary() {
-    let totalExpensesARS = 0;
-    const participantBalances = {};
-
-    participants.forEach(p => {
-        participantBalances[p] = 0;
-    });
-
-    generalExpenses.forEach(expense => {
-        // General expenses are always in ARS
-        const priceInARS = expense.price;
-        totalExpensesARS += priceInARS;
-
-        const costPerInvolvedPerson = expense.involvedParticipants.length > 0 ? priceInARS / expense.involvedParticipants.length : 0;
-
-        expense.involvedParticipants.forEach(involvedP => {
-            participantBalances[involvedP] -= costPerInvolvedPerson;
-        });
-
-        participantBalances[expense.payer] += priceInARS;
-    });
-
-    totalGeneralExpensesSpan.textContent = `ARS ${totalExpensesARS.toFixed(2)}`;
-
-    const numParticipants = participants.length;
-    const averageExpensePerPersonOverall = numParticipants > 0 ? totalExpensesARS / numParticipants : 0;
-    averageGeneralExpenseSpan.textContent = `ARS ${averageExpensePerPersonOverall.toFixed(2)}`;
-
-    generateBalanceSettlement(participantBalances, generalBalanceList, noGeneralBalancesMessage);
-}
-
-// Reusable function to generate balance settlement
-function generateBalanceSettlement(participantBalances, balanceListElement, noBalancesMessageElement) {
-    const numParticipants = participants.length;
-    const hasExpenses = Object.values(participantBalances).some(balance => Math.abs(balance) > 0.01);
-
-    if (numParticipants === 0 || !hasExpenses) {
-        balanceListElement.innerHTML = ''; // Clear previous balances
-        noBalancesMessageElement.classList.remove('hidden');
-        noBalancesMessageElement.textContent = numParticipants === 0 ? 'Añade participantes y gastos para ver los saldos.' : 'Añade gastos para ver los saldos.';
-        balanceListElement.appendChild(noBalancesMessageElement);
-        return;
-    } else {
-        noBalancesMessageElement.classList.add('hidden');
-    }
-
-    const balancesToSettle = [];
-    for (const payer in participantBalances) {
-        if (Math.abs(participantBalances[payer]) > 0.01) {
-            balancesToSettle.push({ name: payer, balance: participantBalances[payer] });
-        }
-    }
-
-    balancesToSettle.sort((a, b) => a.balance - b.balance);
-
-    let i = 0;
-    let j = balancesToSettle.length - 1;
-    balanceListElement.innerHTML = '';
-
-    if (balancesToSettle.length === 0) {
-        const listItem = document.createElement('li');
-        listItem.textContent = '¡Todos los gastos están equilibrados! 🎉';
-        balanceListElement.appendChild(listItem);
-        return;
-    }
-
-    let transactionsGenerated = false;
-    while (i < j) {
-        const debtor = balancesToSettle[i];
-        const creditor = balancesToSettle[j];
-
-        if (debtor.balance >= -0.01 && creditor.balance <= 0.01) {
-            break;
-        }
-
-        const amountToSettle = Math.min(Math.abs(debtor.balance), creditor.balance);
-
-        if (amountToSettle > 0.01) {
-            const listItem = document.createElement('li');
-            listItem.textContent = `${debtor.name} debe ARS ${amountToSettle.toFixed(2)} a ${creditor.name}.`;
-            balanceListElement.appendChild(listItem);
-            transactionsGenerated = true;
-        }
-
-        debtor.balance += amountToSettle;
-        creditor.balance -= amountToSettle;
-
-        if (debtor.balance >= -0.01) {
-            i++;
-        }
-        if (creditor.balance <= 0.01) {
-            j--;
-        }
-    }
-
-    if (!transactionsGenerated && balancesToSettle.some(b => Math.abs(b.balance) > 0.01)) {
-        // This case handles very small, residual balances that didn't trigger a transaction
-        // or cases where the balance is already effectively zero.
-        const listItem = document.createElement('li');
-        listItem.textContent = '¡Todos los gastos están equilibrados! 🎉';
-        balanceListElement.appendChild(listItem);
-    } else if (!transactionsGenerated && balancesToSettle.every(b => Math.abs(b.balance) <= 0.01)) {
-        // Explicitly show balanced if all are within tolerance and no transactions were needed
-         const listItem = document.createElement('li');
-         listItem.textContent = '¡Todos los gastos están equilibrados! 🎉';
-         balanceListElement.appendChild(listItem);
-    }
-}
-
 
 /**
  * Fetches the current USD to ARS exchange rate from Open Exchange Rates API.
@@ -496,7 +320,7 @@ async function fetchExchangeRate() {
     exchangeRateDisplay.textContent = 'Cargando...';
     // REGÍSTRATE EN openexchangerates.org PARA OBTENER TU CLAVE API GRATUITA
     // Y REEMPLAZA 'YOUR_OPEN_EXCHANGE_RATES_API_KEY' CON TU CLAVE REAL.
-    const apiKey = '44426f5c88d04ec487673e15502bdfb2'; // <-- ¡PEGA TU CLAVE API AQUÍ!
+    const apiKey = 'YOUR_OPEN_EXCHANGE_RATES_API_KEY'; // <-- ¡PEGA TU CLAVE API AQUÍ!
     const apiUrl = `https://open.er-api.com/v6/latest/USD?apikey=${apiKey}`;
 
     try {
@@ -506,8 +330,9 @@ async function fetchExchangeRate() {
         if (data.result === 'success' && data.rates && data.rates.ARS) {
             currentUsdToArsRate = data.rates.ARS;
             exchangeRateDisplay.textContent = `1 USD = ARS ${currentUsdToArsRate.toFixed(2)}`;
-            updateTravelSummary(); // Recalcular el resumen de viaje con el nuevo tipo de cambio
+            updateSummary(); // Recalcular el resumen con el nuevo tipo de cambio
         } else {
+            // Manejar errores específicos de la API si el resultado no es 'success' o falta la tasa
             throw new Error(data.error || 'Tipo de cambio ARS no encontrado en la respuesta de la API.');
         }
     } catch (error) {
@@ -515,31 +340,159 @@ async function fetchExchangeRate() {
         exchangeRateDisplay.textContent = `Error al cargar (usando ${defaultUsdToArsRate.toFixed(2)})`;
         currentUsdToArsRate = defaultUsdToArsRate; // Usar el valor por defecto en caso de error
         showModal('No se pudo obtener el tipo de cambio actual. Se utilizará un valor por defecto de 1 USD = ARS ' + defaultUsdToArsRate.toFixed(2) + '. Asegúrate de haber pegado tu clave API de Open Exchange Rates.');
-        updateTravelSummary();
+        updateSummary();
     }
 }
 
-// --- Initialization ---
-document.addEventListener('DOMContentLoaded', () => {
-    // Set current date as default for the travel date field
-    const today = new Date();
-    const yyyy = today.getFullYear();
-    const mm = String(today.getMonth() + 1).padStart(2, '0');
-    const dd = String(today.getDate()).padStart(2, '0');
-    travelExpenseDateInput.value = `${yyyy}-${mm}-${dd}`;
+// Function to update the summary of balances
+function updateSummary() {
+    const currentExpenses = getExpenses();
+    const currentParticipants = getParticipants();
 
-    // Initialize participants and expenses
+    let totalExpensesARS = 0;
+    const participantBalances = {}; // { 'Nombre': net_balance_in_ARS }
+
+    // Initialize participant balances to 0
+    currentParticipants.forEach(p => {
+        participantBalances[p] = 0;
+    });
+
+    // Calculate total expenses and individual contributions/debts
+    currentExpenses.forEach(expense => {
+        let priceInARS = expense.price;
+        if (expense.currency === 'USD') {
+            priceInARS *= currentUsdToArsRate; // Usar el tipo de cambio actual
+        }
+        totalExpensesARS += priceInARS;
+
+        // Amount each involved participant should pay for this specific expense
+        const costPerInvolvedPerson = expense.involvedParticipants.length > 0 ? priceInARS / expense.involvedParticipants.length : 0;
+
+        // Subtract the share from each involved participant
+        expense.involvedParticipants.forEach(involvedP => {
+            if (participantBalances[involvedP] !== undefined) { // Ensure participant exists
+                participantBalances[involvedP] -= costPerInvolvedPerson;
+            }
+        });
+
+        // Add the full amount to the payer's balance (they paid it all)
+        if (participantBalances[expense.payer] !== undefined) { // Ensure payer exists
+            participantBalances[expense.payer] += priceInARS;
+        }
+    });
+
+    // Update UI elements based on current mode
+    let targetTotalExpensesSpan = currentMode === 'travel' ? travelTotalExpensesSpan : generalTotalExpensesSpan;
+    let targetAverageExpenseSpan = currentMode === 'travel' ? travelAverageExpenseSpan : generalAverageExpenseSpan;
+    let targetBalanceList = currentMode === 'travel' ? travelBalanceList : generalBalanceList;
+    let targetNoBalancesMessage = currentMode === 'travel' ? noTravelBalancesMessage : noGeneralBalancesMessage;
+
+    targetTotalExpensesSpan.textContent = `ARS ${totalExpensesARS.toFixed(2)}`;
+
+    const numParticipants = currentParticipants.length;
+    const averageExpensePerPersonOverall = numParticipants > 0 ? totalExpensesARS / numParticipants : 0;
+    targetAverageExpenseSpan.textContent = `ARS ${averageExpensePerPersonOverall.toFixed(2)}`;
+
+
+    // Display "Add expenses to see balances." if no participants or expenses
+    if (numParticipants === 0 || currentExpenses.length === 0) {
+        targetBalanceList.innerHTML = `<li id="${targetNoBalancesMessage.id}" class="text-gray-500">Añade gastos para ver los saldos.</li>`;
+        return;
+    } else {
+        const existingNoBalancesMessage = document.getElementById(targetNoBalancesMessage.id);
+        if (existingNoBalancesMessage) {
+            existingNoBalancesMessage.remove();
+        }
+    }
+
+    // Prepare balances for the settlement algorithm
+    const balancesToSettle = [];
+    for (const payer in participantBalances) {
+        // Only include participants who have a non-zero balance
+        if (Math.abs(participantBalances[payer]) > 0.01) { // Tolerance for floating point
+            balancesToSettle.push({ name: payer, balance: participantBalances[payer] });
+        }
+    }
+
+    // Simple algorithm to settle payments
+    balancesToSettle.sort((a, b) => a.balance - b.balance); // Sort from most owed to most paid
+
+    let i = 0;
+    let j = balancesToSettle.length - 1;
+    targetBalanceList.innerHTML = ''; // Clear list of balances
+
+    if (balancesToSettle.length === 0) {
+        const listItem = document.createElement('li');
+        listItem.textContent = '¡Todos los gastos están equilibrados! 🎉';
+        targetBalanceList.appendChild(listItem);
+        return;
+    }
+
+    while (i < j) {
+        const debtor = balancesToSettle[i];
+        const creditor = balancesToSettle[j];
+
+        // If debtor is close to zero or positive, and creditor is close to zero or negative, stop
+        if (debtor.balance >= -0.01 && creditor.balance <= 0.01) {
+            break; // All are balanced within tolerance
+        }
+
+        // Amount to settle is the minimum of what debtor owes and what creditor is owed
+        const amountToSettle = Math.min(Math.abs(debtor.balance), creditor.balance);
+
+        if (amountToSettle > 0.01) { // Only if there's a significant amount to settle
+            const listItem = document.createElement('li');
+            listItem.textContent = `${debtor.name} debe ARS ${amountToSettle.toFixed(2)} a ${creditor.name}.`;
+            targetBalanceList.appendChild(listItem);
+        }
+
+        // Adjust balances
+        debtor.balance += amountToSettle;
+        creditor.balance -= amountToSettle;
+
+        // Move pointers
+        if (debtor.balance >= -0.01) { // If debtor has paid off their debt (or is close to zero)
+            i++;
+        }
+        if (creditor.balance <= 0.01) { // If creditor has received what they are owed (or is close to zero)
+            j--;
+        }
+    }
+
+    // If no transactions were generated but there are still non-zero balances (due to floating point or very small amounts)
+    if (targetBalanceList.children.length === 0 && balancesToSettle.some(b => Math.abs(b.balance) > 0.01)) {
+         const listItem = document.createElement('li');
+         listItem.textContent = '¡Todos los gastos están equilibrados! 🎉'; // Or a more precise message if small discrepancies
+         targetBalanceList.appendChild(listItem);
+    }
+}
+
+// --- Unified UI Rendering Function ---
+function renderUI() {
     renderParticipants();
-    updatePayerSelects();
+    updatePayerSelect();
     updateInvolvedParticipantsCheckboxes();
-    renderTravelExpenses();
-    renderGeneralExpenses();
+    renderExpenses();
+    updateSummary();
+}
 
-    // Set initial tab state
-    activateTab(travelExpensesTabBtn, travelExpensesContent, generalExpensesTabBtn, generalExpensesContent);
+// --- Event Listeners for adding participants and expenses ---
+addTravelParticipantBtn.addEventListener('click', () => addParticipant(travelParticipantNameInput, travelParticipantsListDiv, addTravelParticipantBtn));
+addGeneralParticipantBtn.addEventListener('click', () => addParticipant(generalParticipantNameInput, generalParticipantsListDiv, addGeneralParticipantBtn));
 
-    // Fetch exchange rate and update summaries
-    fetchExchangeRate();
-    updateTravelSummary();
-    updateGeneralSummary();
+travelExpenseForm.addEventListener('submit', addExpense);
+generalExpenseForm.addEventListener('submit', addExpense);
+
+// Initialize the application on page load
+document.addEventListener('DOMContentLoaded', () => {
+    // Set current date as default for date fields
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0'); // Months are 0-indexed
+    const day = String(today.getDate()).padStart(2, '0');
+    document.getElementById('travelExpenseDate').value = `${year}-${month}-${day}`;
+    document.getElementById('generalExpenseDate').value = `${year}-${month}-${day}`;
+
+    fetchExchangeRate(); // Fetch the exchange rate for travel mode
+    switchMode('general'); // Start in general mode
 });
