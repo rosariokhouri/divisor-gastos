@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Divisor de Gastos de Viaje</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Fuente Inter */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f4f8; /* Un color de fondo suave */
+        }
+        /* Estilo para el modal */
+        .modal {
+            display: none; /* Oculto por defecto */
+            position: fixed; /* Posición fija en la pantalla */
+            z-index: 1000; /* Por encima de todo lo demás */
+            left: 0;
+            top: 0;
+            width: 100%; /* Ancho completo */
+            height: 100%; /* Alto completo */
+            overflow: auto; /* Habilitar scroll si es necesario */
+            background-color: rgba(0,0,0,0.4); /* Fondo semi-transparente */
+            justify-content: center; /* Centrar contenido horizontalmente */
+            align-items: center; /* Centrar contenido verticalmente */
+        }
+        .modal-content {
+            background-color: #ffffff;
+            margin: auto;
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            max-width: 90%;
+            width: 400px;
+            text-align: center;
+        }
+        .close-button {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+        .close-button:hover,
+        .close-button:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center py-8 px-4 sm:px-6 lg:px-8">
+
+    <!-- Encabezado de la aplicación -->
+    <header class="w-full max-w-4xl text-center mb-8">
+        <h1 class="text-4xl sm:text-5xl font-extrabold text-gray-900 mb-4">Divisor de Gastos de Viaje</h1>
+        <p class="text-lg text-gray-600">Organiza y divide fácilmente los gastos de tu viaje.</p>
+        <div class="mt-4 text-md text-gray-700">
+            Tipo de cambio USD a ARS: <span id="exchangeRateDisplay" class="font-semibold text-blue-700">Cargando...</span>
+        </div>
+    </header>
+
+    <!-- Contenedor principal de la aplicación -->
+    <main class="w-full max-w-4xl bg-white rounded-xl shadow-lg p-6 sm:p-8 space-y-8">
+
+        <!-- Sección para añadir participantes -->
+        <section class="border-b border-gray-200 pb-6">
+            <h2 class="text-2xl font-semibold text-gray-800 mb-4">Participantes del Viaje</h2>
+            <div class="flex flex-col sm:flex-row gap-4 mb-4">
+                <input type="text" id="participantName" placeholder="Nombre del participante"
+                       class="flex-grow p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                <button id="addParticipantBtn"
+                        class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105">
+                    Añadir Participante
+                </button>
+            </div>
+            <div id="participantsList" class="flex flex-wrap gap-2">
+                <!-- Los participantes se añadirán aquí -->
+            </div>
+        </section>
+
+        <!-- Sección para añadir un nuevo gasto -->
+        <section class="border-b border-gray-200 pb-6">
+            <h2 class="text-2xl font-semibold text-gray-800 mb-4">Añadir Nuevo Gasto</h2>
+            <form id="expenseForm" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Campo Fecha -->
+                <div>
+                    <label for="expenseDate" class="block text-sm font-medium text-gray-700 mb-1">Fecha</label>
+                    <input type="date" id="expenseDate" required
+                           class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                <!-- Campo Ítem -->
+                <div>
+                    <label for="expenseItem" class="block text-sm font-medium text-gray-700 mb-1">Ítem / Descripción</label>
+                    <input type="text" id="expenseItem" placeholder="Ej: Cena, Nafta, Entrada al museo" required
+                           class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                <!-- Campo Precio -->
+                <div>
+                    <label for="expensePrice" class="block text-sm font-medium text-gray-700 mb-1">Precio</label>
+                    <input type="number" id="expensePrice" step="0.01" min="0" placeholder="0.00" required
+                           class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                <!-- Campo Moneda -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Moneda</label>
+                    <div class="flex gap-4 p-3 border border-gray-300 rounded-lg bg-gray-50">
+                        <label class="inline-flex items-center">
+                            <input type="radio" name="currency" value="ARS" checked
+                                   class="form-radio h-5 w-5 text-blue-600">
+                            <span class="ml-2 text-gray-700">ARS</span>
+                        </label>
+                        <label class="inline-flex items-center">
+                            <input type="radio" name="currency" value="USD"
+                                   class="form-radio h-5 w-5 text-blue-600">
+                            <span class="ml-2 text-gray-700">USD</span>
+                        </label>
+                    </div>
+                </div>
+                <!-- Campo Quién Pagó -->
+                <div>
+                    <label for="expensePayer" class="block text-sm font-medium text-gray-700 mb-1">Quién Pagó</label>
+                    <select id="expensePayer" required
+                            class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 bg-white">
+                        <option value="">Selecciona un participante</option>
+                        <!-- Los participantes se cargarán aquí dinámicamente -->
+                    </select>
+                </div>
+                <!-- Campo Quiénes Participan -->
+                <div class="md:col-span-2">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Quiénes Participan en este Gasto</label>
+                    <div id="involvedParticipantsCheckboxes" class="p-3 border border-gray-300 rounded-lg bg-gray-50 flex flex-wrap gap-x-4 gap-y-2">
+                        <!-- Las casillas de verificación de participantes se cargarán aquí dinámicamente -->
+                    </div>
+                </div>
+                <!-- Botón Añadir Gasto -->
+                <div class="md:col-span-2 flex justify-end">
+                    <button type="submit"
+                            class="bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-8 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105">
+                        Añadir Gasto
+                    </button>
+                </div>
+            </form>
+        </section>
+
+        <!-- Sección de lista de gastos -->
+        <section>
+            <h2 class="text-2xl font-semibold text-gray-800 mb-4">Lista de Gastos</h2>
+            <div class="overflow-x-auto rounded-lg shadow-sm border border-gray-200">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ítem</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Precio</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Moneda</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pagó</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Participan</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="expensesTableBody" class="bg-white divide-y divide-gray-200">
+                        <!-- Los gastos se añadirán aquí -->
+                    </tbody>
+                </table>
+            </div>
+            <p id="noExpensesMessage" class="text-center text-gray-500 mt-4 hidden">Aún no hay gastos. ¡Añade el primero!</p>
+        </section>
+
+        <!-- Sección de resumen de saldos -->
+        <section>
+            <h2 class="text-2xl font-semibold text-gray-800 mb-4">Resumen de Saldos</h2>
+            <div id="summarySection" class="bg-blue-50 border border-blue-200 rounded-lg p-6">
+                <p class="text-gray-700 text-lg mb-2">Total de gastos del viaje: <span id="totalExpenses" class="font-bold text-blue-800">ARS 0.00</span></p>
+                <p class="text-gray-700 text-lg mb-4">Gasto promedio por persona: <span id="averageExpense" class="font-bold text-blue-800">ARS 0.00</span></p>
+
+                <h3 class="text-xl font-semibold text-gray-800 mb-3">Quién debe a quién:</h3>
+                <ul id="balanceList" class="list-disc list-inside text-gray-700 space-y-1">
+                    <!-- Los saldos se mostrarán aquí -->
+                    <li id="noBalancesMessage" class="text-gray-500">Añade gastos para ver los saldos.</li>
+                </ul>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Modal para mensajes -->
+    <div id="myModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button">&times;</span>
+            <p id="modalMessage" class="text-lg text-gray-800"></p>
+            <button id="modalOkButton" class="mt-4 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-5 rounded-lg transition duration-300 ease-in-out">OK</button>
+        </div>
+    </div>
+
+    <script>
+        // Array para almacenar los gastos
+        let expenses = [];
+        // Array para almacenar los participantes
+        let participants = [];
+        // Variable para almacenar el tipo de cambio USD a ARS
+        let currentUsdToArsRate = 1000; // Valor por defecto si la API falla o no se carga
+        const defaultUsdToArsRate = 1000; // Valor por defecto si la API falla o no se carga
+
+        // Referencias a elementos del DOM
+        const participantNameInput = document.getElementById('participantName');
+        const addParticipantBtn = document.getElementById('addParticipantBtn');
+        const participantsListDiv = document.getElementById('participantsList');
+        const expensePayerSelect = document.getElementById('expensePayer');
+        const involvedParticipantsCheckboxesDiv = document.getElementById('involvedParticipantsCheckboxes');
+        const expenseForm = document.getElementById('expenseForm');
+        const expensesTableBody = document.getElementById('expensesTableBody');
+        const noExpensesMessage = document.getElementById('noExpensesMessage');
+        const totalExpensesSpan = document.getElementById('totalExpenses');
+        const averageExpenseSpan = document.getElementById('averageExpense');
+        const balanceList = document.getElementById('balanceList');
+        const noBalancesMessage = document.getElementById('noBalancesMessage');
+        const exchangeRateDisplay = document.getElementById('exchangeRateDisplay');
+
+        // Modal elements
+        const myModal = document.getElementById('myModal');
+        const modalMessage = document.getElementById('modalMessage');
+        const closeButton = document.querySelector('.close-button');
+        const modalOkButton = document.getElementById('modalOkButton');
+
+        // Function to show the modal
+        function showModal(message) {
+            modalMessage.textContent = message;
+            myModal.style.display = 'flex'; // Use flex to center
+        }
+
+        // Event listeners for the modal
+        closeButton.onclick = function() {
+            myModal.style.display = 'none';
+        }
+        modalOkButton.onclick = function() {
+            myModal.style.display = 'none';
+        }
+        window.onclick = function(event) {
+            if (event.target == myModal) {
+                myModal.style.display = 'none';
+            }
+        }
+
+        // Function to add a participant
+        addParticipantBtn.addEventListener('click', () => {
+            const name = participantNameInput.value.trim();
+            if (name && !participants.includes(name)) {
+                participants.push(name);
+                participantNameInput.value = '';
+                renderParticipants();
+                updatePayerSelect();
+                updateInvolvedParticipantsCheckboxes(); // Update checkboxes when new participant is added
+                updateSummary(); // Update summary if a participant is added
+            } else if (name && participants.includes(name)) {
+                showModal('El participante "' + name + '" ya existe.');
+            } else {
+                showModal('Por favor, ingresa un nombre para el participante.');
+            }
+        });
+
+        // Function to render the list of participants
+        function renderParticipants() {
+            participantsListDiv.innerHTML = '';
+            if (participants.length === 0) {
+                participantsListDiv.innerHTML = '<p class="text-gray-500">Aún no hay participantes. Añade algunos para empezar.</p>';
+            } else {
+                participants.forEach(participant => {
+                    const span = document.createElement('span');
+                    span.className = 'bg-blue-100 text-blue-800 text-sm font-medium px-3 py-1 rounded-full flex items-center gap-2';
+                    span.textContent = participant;
+
+                    const removeBtn = document.createElement('button');
+                    removeBtn.textContent = 'x';
+                    removeBtn.className = 'text-blue-600 hover:text-blue-900 font-bold ml-1';
+                    removeBtn.onclick = () => removeParticipant(participant);
+
+                    span.appendChild(removeBtn);
+                    participantsListDiv.appendChild(span);
+                });
+            }
+        }
+
+        // Function to remove a participant
+        function removeParticipant(nameToRemove) {
+            // Check if the participant has associated expenses (either as payer or involved)
+            const hasExpenses = expenses.some(expense =>
+                expense.payer === nameToRemove || expense.involvedParticipants.includes(nameToRemove)
+            );
+
+            if (hasExpenses) {
+                showModal(`No se puede eliminar a "${nameToRemove}" porque tiene gastos asociados. Primero elimina sus gastos o quítalo de ellos.`);
+                return;
+            }
+
+            participants = participants.filter(p => p !== nameToRemove);
+            renderParticipants();
+            updatePayerSelect();
+            updateInvolvedParticipantsCheckboxes(); // Update checkboxes after participant removal
+            updateSummary();
+        }
+
+        // Function to update the "Who Paid" select
+        function updatePayerSelect() {
+            expensePayerSelect.innerHTML = '<option value="">Selecciona un participante</option>';
+            participants.forEach(participant => {
+                const option = document.createElement('option');
+                option.value = participant;
+                option.textContent = participant;
+                expensePayerSelect.appendChild(option);
+            });
+        }
+
+        // Function to update the "Who Participates" checkboxes
+        function updateInvolvedParticipantsCheckboxes() {
+            involvedParticipantsCheckboxesDiv.innerHTML = '';
+            if (participants.length === 0) {
+                involvedParticipantsCheckboxesDiv.innerHTML = '<p class="text-gray-500">Añade participantes para poder seleccionarlos aquí.</p>';
+            } else {
+                participants.forEach(participant => {
+                    const label = document.createElement('label');
+                    label.className = 'inline-flex items-center';
+                    label.innerHTML = `
+                        <input type="checkbox" name="involvedParticipant" value="${participant}"
+                               class="form-checkbox h-5 w-5 text-blue-600 rounded">
+                        <span class="ml-2 text-gray-700">${participant}</span>
+                    `;
+                    involvedParticipantsCheckboxesDiv.appendChild(label);
+                });
+            }
+        }
+
+        // Handle expense form submission
+        expenseForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+
+            if (participants.length === 0) {
+                showModal('Por favor, añade al menos un participante antes de añadir gastos.');
+                return;
+            }
+
+            const date = document.getElementById('expenseDate').value;
+            const item = document.getElementById('expenseItem').value;
+            const price = parseFloat(document.getElementById('expensePrice').value);
+            const currency = document.querySelector('input[name="currency"]:checked').value;
+            const payer = document.getElementById('expensePayer').value;
+
+            // Get selected involved participants
+            const selectedInvolvedCheckboxes = document.querySelectorAll('input[name="involvedParticipant"]:checked');
+            const involvedParticipants = Array.from(selectedInvolvedCheckboxes).map(cb => cb.value);
+
+            if (!payer) {
+                showModal('Por favor, selecciona quién pagó el gasto.');
+                return;
+            }
+
+            if (involvedParticipants.length === 0) {
+                showModal('Por favor, selecciona al menos un participante involucrado en este gasto.');
+                return;
+            }
+
+            const newExpense = {
+                id: Date.now(), // Unique ID for the expense
+                date,
+                item,
+                price,
+                currency,
+                payer,
+                involvedParticipants // Store who is involved in this specific expense
+            };
+
+            expenses.push(newExpense);
+            expenseForm.reset(); // Clear the form
+            updateInvolvedParticipantsCheckboxes(); // Re-render checkboxes to clear selections
+            renderExpenses();
+            updateSummary();
+        });
+
+        // Function to render the expenses table
+        function renderExpenses() {
+            expensesTableBody.innerHTML = '';
+            if (expenses.length === 0) {
+                noExpensesMessage.classList.remove('hidden');
+            } else {
+                noExpensesMessage.classList.add('hidden');
+                expenses.forEach(expense => {
+                    const row = expensesTableBody.insertRow();
+                    row.className = 'hover:bg-gray-50';
+                    row.innerHTML = `
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${expense.date}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${expense.item}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${expense.price.toFixed(2)}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${expense.currency}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${expense.payer}</td>
+                        <td class="px-6 py-4 text-sm text-gray-900">${expense.involvedParticipants.join(', ')}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                            <button onclick="deleteExpense(${expense.id})"
+                                    class="text-red-600 hover:text-red-900 transition duration-300 ease-in-out">
+                                Eliminar
+                            </button>
+                        </td>
+                    `;
+                });
+            }
+        }
+
+        // Function to delete an expense
+        function deleteExpense(id) {
+            expenses = expenses.filter(expense => expense.id !== id);
+            renderExpenses();
+            updateSummary();
+        }
+
+        /**
+         * Fetches the current USD to ARS exchange rate from Open Exchange Rates API.
+         * IMPORTANT: Replace 'YOUR_OPEN_EXCHANGE_RATES_API_KEY' with your actual API key.
+         */
+        async function fetchExchangeRate() {
+            exchangeRateDisplay.textContent = 'Cargando...';
+            // REGÍSTRATE EN openexchangerates.org PARA OBTENER TU CLAVE API GRATUITA
+            // Y REEMPLAZA 'YOUR_OPEN_EXCHANGE_RATES_API_KEY' CON TU CLAVE REAL.
+            const apiKey = 'YOUR_OPEN_EXCHANGE_RATES_API_KEY'; // <-- ¡PEGA TU CLAVE API AQUÍ!
+            const apiUrl = `https://open.er-api.com/v6/latest/USD?apikey=${apiKey}`;
+
+            try {
+                const response = await fetch(apiUrl);
+                const data = await response.json();
+
+                if (data.result === 'success' && data.rates && data.rates.ARS) {
+                    currentUsdToArsRate = data.rates.ARS;
+                    exchangeRateDisplay.textContent = `1 USD = ARS ${currentUsdToArsRate.toFixed(2)}`;
+                    updateSummary(); // Recalcular el resumen con el nuevo tipo de cambio
+                } else {
+                    // Manejar errores específicos de la API si el resultado no es 'success' o falta la tasa
+                    throw new Error(data.error || 'Tipo de cambio ARS no encontrado en la respuesta de la API.');
+                }
+            } catch (error) {
+                console.error("Error al obtener el tipo de cambio:", error);
+                exchangeRateDisplay.textContent = `Error al cargar (usando ${defaultUsdToArsRate.toFixed(2)})`;
+                currentUsdToArsRate = defaultUsdToArsRate; // Usar el valor por defecto en caso de error
+                showModal('No se pudo obtener el tipo de cambio actual. Se utilizará un valor por defecto de 1 USD = ARS ' + defaultUsdToArsRate.toFixed(2) + '. Asegúrate de haber pegado tu clave API de Open Exchange Rates.');
+                updateSummary();
+            }
+        }
+
+        // Function to update the summary of balances
+        function updateSummary() {
+            let totalExpensesARS = 0;
+            const participantBalances = {}; // { 'Nombre': net_balance_in_ARS }
+
+            // Initialize participant balances to 0
+            participants.forEach(p => {
+                participantBalances[p] = 0;
+            });
+
+            // Calculate total expenses and individual contributions/debts
+            expenses.forEach(expense => {
+                let priceInARS = expense.price;
+                if (expense.currency === 'USD') {
+                    priceInARS *= currentUsdToArsRate; // Usar el tipo de cambio actual
+                }
+                totalExpensesARS += priceInARS;
+
+                // Amount each involved participant should pay for this specific expense
+                const costPerInvolvedPerson = expense.involvedParticipants.length > 0 ? priceInARS / expense.involvedParticipants.length : 0;
+
+                // Subtract the share from each involved participant
+                expense.involvedParticipants.forEach(involvedP => {
+                    participantBalances[involvedP] -= costPerInvolvedPerson;
+                });
+
+                // Add the full amount to the payer's balance (they paid it all)
+                participantBalances[expense.payer] += priceInARS;
+            });
+
+            totalExpensesSpan.textContent = `ARS ${totalExpensesARS.toFixed(2)}`;
+
+            // Average expense per person is now less meaningful as expenses are not evenly distributed
+            // However, we can calculate an 'overall' average based on total expenses and total participants
+            const numParticipants = participants.length;
+            const averageExpensePerPersonOverall = numParticipants > 0 ? totalExpensesARS / numParticipants : 0;
+            averageExpenseSpan.textContent = `ARS ${averageExpensePerPersonOverall.toFixed(2)}`;
+
+
+            // Display "Add expenses to see balances." if no participants or expenses
+            if (numParticipants === 0 || expenses.length === 0) {
+                balanceList.innerHTML = '<li id="noBalancesMessage" class="text-gray-500">Añade gastos para ver los saldos.</li>';
+                return;
+            } else {
+                // Ensure noBalancesMessage is removed if it exists from a previous state
+                const existingNoBalancesMessage = document.getElementById('noBalancesMessage');
+                if (existingNoBalancesMessage) {
+                    existingNoBalancesMessage.remove();
+                }
+            }
+
+            // Prepare balances for the settlement algorithm
+            const balancesToSettle = [];
+            for (const payer in participantBalances) {
+                // Only include participants who have a non-zero balance
+                if (Math.abs(participantBalances[payer]) > 0.01) { // Tolerance for floating point
+                    balancesToSettle.push({ name: payer, balance: participantBalances[payer] });
+                }
+            }
+
+            // Simple algorithm to settle payments
+            balancesToSettle.sort((a, b) => a.balance - b.balance); // Sort from most owed to most paid
+
+            let i = 0;
+            let j = balancesToSettle.length - 1;
+            balanceList.innerHTML = ''; // Clear list of balances
+
+            if (balancesToSettle.length === 0) {
+                const listItem = document.createElement('li');
+                listItem.textContent = '¡Todos los gastos están equilibrados! 🎉';
+                balanceList.appendChild(listItem);
+                return;
+            }
+
+            while (i < j) {
+                const debtor = balancesToSettle[i];
+                const creditor = balancesToSettle[j];
+
+                // If debtor is close to zero or positive, and creditor is close to zero or negative, stop
+                if (debtor.balance >= -0.01 && creditor.balance <= 0.01) {
+                    break; // All are balanced within tolerance
+                }
+
+                // Amount to settle is the minimum of what debtor owes and what creditor is owed
+                const amountToSettle = Math.min(Math.abs(debtor.balance), creditor.balance);
+
+                if (amountToSettle > 0.01) { // Only if there's a significant amount to settle
+                    const listItem = document.createElement('li');
+                    listItem.textContent = `${debtor.name} debe ARS ${amountToSettle.toFixed(2)} a ${creditor.name}.`;
+                    balanceList.appendChild(listItem);
+                }
+
+                // Adjust balances
+                debtor.balance += amountToSettle;
+                creditor.balance -= amountToSettle;
+
+                // Move pointers
+                if (debtor.balance >= -0.01) { // If debtor has paid off their debt (or is close to zero)
+                    i++;
+                }
+                if (creditor.balance <= 0.01) { // If creditor has received what they are owed (or is close to zero)
+                    j--;
+                }
+            }
+
+            // If no transactions were generated but there are still non-zero balances (due to floating point or very small amounts)
+            if (balanceList.children.length === 0 && balancesToSettle.some(b => Math.abs(b.balance) > 0.01)) {
+                 const listItem = document.createElement('li');
+                 listItem.textContent = '¡Todos los gastos están equilibrados! 🎉'; // Or a more precise message if small discrepancies
+                 balanceList.appendChild(listItem);
+            }
+        }
+
+        // Initialize the application on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            renderParticipants();
+            updatePayerSelect(); // Populate payer select
+            updateInvolvedParticipantsCheckboxes(); // Populate involved participants checkboxes
+            fetchExchangeRate(); // Fetch the exchange rate
+            renderExpenses();
+            // Set current date as default for the date field
+            const today = new Date();
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, '0'); // Months are 0-indexed
+            const dd = String(today.getDate()).padStart(2, '0');
+            document.getElementById('expenseDate').value = `${yyyy}-${mm}-${dd}`;
+        });
+    </script>
+</body>
+</html>
