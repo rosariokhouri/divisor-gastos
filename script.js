@@ -56,22 +56,47 @@ function hideModal() {
  */
 async function initializeFirebase() {
     try {
-        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
-        if (Object.keys(firebaseConfig).length === 0) {
-            console.error("Firebase config is empty. Cannot initialize Firebase.");
-            showModal("Error: Firebase no está configurado correctamente.");
+        // Log para depuración: Ver el valor de __firebase_config
+        console.log("Valor de __firebase_config (raw):", typeof __firebase_config !== 'undefined' ? __firebase_config : 'undefined');
+
+        let firebaseConfig = {};
+        try {
+            firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        } catch (e) {
+            console.error("Error al parsear __firebase_config:", e);
+            showModal("Error: La configuración de Firebase no es un JSON válido.");
             return;
         }
+
+        if (Object.keys(firebaseConfig).length === 0) {
+            console.error("Firebase config está vacío después de parsear.");
+            showModal("Error: Firebase no está configurado correctamente. La configuración está vacía.");
+            return;
+        }
+        
+        console.log("Firebase config (parsed):", firebaseConfig);
+
         app = initializeApp(firebaseConfig);
         db = getFirestore(app);
         auth = getAuth(app);
 
+        // Log para depuración: Ver el valor de __initial_auth_token
+        console.log("Valor de __initial_auth_token:", typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : 'undefined');
+
         // Intenta iniciar sesión con el token personalizado si está disponible
         if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-            await signInWithCustomToken(auth, __initial_auth_token);
+            try {
+                await signInWithCustomToken(auth, __initial_auth_token);
+                console.log("Autenticación con token personalizado exitosa.");
+            } catch (authError) {
+                console.error("Error al autenticar con token personalizado:", authError);
+                showModal(`Error de autenticación: ${authError.message}. Intentando iniciar sesión anónimamente.`);
+                await signInAnonymously(auth); // Fallback a anónimo si el token falla
+            }
         } else {
             // Si no hay token, inicia sesión anónimamente
             await signInAnonymously(auth);
+            console.log("Autenticación anónima exitosa.");
         }
 
         // Listener para el estado de autenticación
@@ -82,7 +107,7 @@ async function initializeFirebase() {
                 // Una vez autenticado, configurar los listeners de Firestore
                 setupFirestoreListeners();
             } else {
-                console.log("No hay usuario autenticado.");
+                console.log("No hay usuario autenticado después de onAuthStateChanged.");
                 userId = null;
                 // Limpiar datos si no hay usuario
                 generalParticipants = [];
@@ -90,11 +115,12 @@ async function initializeFirebase() {
                 travelParticipants = [];
                 travelExpenses = [];
                 updateUI(); // Actualizar UI para reflejar datos vacíos
+                showModal("No se pudo autenticar al usuario. Por favor, recarga la página.");
             }
         });
     } catch (error) {
-        console.error("Error al inicializar Firebase o autenticar:", error);
-        showModal(`Error al iniciar Firebase: ${error.message}`);
+        console.error("Error general al inicializar Firebase o autenticar:", error);
+        showModal(`Error crítico al iniciar Firebase: ${error.message}.`);
     }
 }
 
@@ -104,15 +130,19 @@ async function initializeFirebase() {
 function setupFirestoreListeners() {
     const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
     if (!userId) {
-        console.warn("No userId available for Firestore listeners.");
+        console.warn("No userId available for Firestore listeners. Retrying setupFirestoreListeners after authentication.");
+        // Podríamos añadir un pequeño retardo y reintentar si userId es nulo,
+        // pero onAuthStateChanged ya debería manejarlo.
         return;
     }
+    console.log(`Configurando listeners de Firestore para appId: ${appId}, userId: ${userId}`);
 
     // Listener para participantes generales
     onSnapshot(collection(db, `artifacts/${appId}/users/${userId}/generalParticipants`), (snapshot) => {
         generalParticipants = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         renderParticipants('general');
         updateSummary('general');
+        console.log("Participantes generales cargados:", generalParticipants.length);
     }, (error) => {
         console.error("Error fetching general participants:", error);
         showModal(`Error al cargar participantes generales: ${error.message}`);
@@ -123,6 +153,7 @@ function setupFirestoreListeners() {
         generalExpenses = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         renderExpenses('general');
         updateSummary('general');
+        console.log("Gastos generales cargados:", generalExpenses.length);
     }, (error) => {
         console.error("Error fetching general expenses:", error);
         showModal(`Error al cargar gastos generales: ${error.message}`);
@@ -133,6 +164,7 @@ function setupFirestoreListeners() {
         travelParticipants = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         renderParticipants('travel');
         updateSummary('travel');
+        console.log("Participantes de viaje cargados:", travelParticipants.length);
     }, (error) => {
         console.error("Error fetching travel participants:", error);
         showModal(`Error al cargar participantes de viaje: ${error.message}`);
@@ -143,6 +175,7 @@ function setupFirestoreListeners() {
         travelExpenses = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         renderExpenses('travel');
         updateSummary('travel');
+        console.log("Gastos de viaje cargados:", travelExpenses.length);
     }, (error) => {
         console.error("Error fetching travel expenses:", error);
         showModal(`Error al cargar gastos de viaje: ${error.message}`);
