@@ -8,7 +8,7 @@ let db;
 let auth;
 let userId;
 let currentMode = 'general'; // 'general' o 'travel'
-let exchangeRate = 1000; // Valor de ejemplo fijo para el tipo de cambio USD a ARS
+let exchangeRate = 1; // Valor inicial, se actualizará con la API
 let editingExpenseId = null; // Para almacenar el ID del gasto que se está editando
 
 // Datos de la aplicación (se cargarán desde Firebase)
@@ -329,6 +329,7 @@ function editExpense(mode, id) {
         // Para el modo viaje, seleccionar la moneda
         if (mode === 'travel') {
             document.querySelector(`input[name="travelCurrency"][value="${expenseToEdit.currency}"]`).checked = true;
+            document.getElementById('travelExpenseDate').value = expenseToEdit.date; // Cargar fecha también
         }
     }
 }
@@ -360,6 +361,8 @@ async function deleteExpense(mode, id) {
 function renderExpenses(mode) {
     const expensesTableBody = document.getElementById(`${mode}ExpensesTableBody`);
     const noExpensesMessage = document.getElementById(`${mode}NoExpensesMessage`);
+    const expensesTableHeader = document.getElementById(`${mode}ExpensesTableHeader`);
+
 
     const expenses = mode === 'general' ? generalExpenses : travelExpenses;
 
@@ -372,19 +375,45 @@ function renderExpenses(mode) {
         noExpensesMessage.classList.add('hidden');
     }
 
+    // Actualizar encabezado de la tabla según el modo
+    if (mode === 'general') {
+        expensesTableHeader.innerHTML = `
+            <tr>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ítem</th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Precio</th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Moneda</th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pagó</th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Participan</th>
+                <th scope="col" class="relative px-6 py-3"><span class="sr-only">Acciones</span></th>
+            </tr>
+        `;
+    } else { // travel mode
+        expensesTableHeader.innerHTML = `
+            <tr>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ítem</th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Precio</th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Moneda</th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pagó</th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Participan</th>
+                <th scope="col" class="relative px-6 py-3"><span class="sr-only">Acciones</span></th>
+            </tr>
+        `;
+    }
+
+
     expenses.forEach(expense => {
         const row = expensesTableBody.insertRow();
         row.className = 'hover:bg-gray-50 cursor-pointer'; // Añadir cursor-pointer
         row.onclick = () => editExpense(mode, expense.id); // Añadir evento de clic para editar
 
         // Determinar qué columnas mostrar
-        let dateCell = '';
+        let cells = '';
         if (mode === 'travel') { // Solo mostrar fecha en modo viaje
-            dateCell = `<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${expense.date}</td>`;
+            cells += `<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${expense.date}</td>`;
         }
 
-        row.innerHTML = `
-            ${dateCell}
+        cells += `
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${expense.item}</td>
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${parseFloat(expense.price).toFixed(2)}</td>
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${expense.currency}</td>
@@ -394,6 +423,7 @@ function renderExpenses(mode) {
                 <button onclick="event.stopPropagation(); deleteExpense('${mode}', '${expense.id}')" class="text-red-600 hover:text-red-900 transition duration-150 ease-in-out">Eliminar</button>
             </td>
         `;
+        row.innerHTML = cells;
     });
 }
 
@@ -549,16 +579,33 @@ function updateUI() {
 }
 
 /**
- * Simula la obtención del tipo de cambio USD a ARS.
- * En un entorno real, esto llamaría a una API externa.
+ * Obtiene el tipo de cambio USD a ARS desde una API externa.
  */
-function fetchExchangeRate() {
+async function fetchExchangeRate() {
     exchangeRateDisplay.textContent = 'Cargando...';
-    // Simulación de una llamada a API
-    setTimeout(() => {
-        exchangeRate = 1000; // Valor de ejemplo
-        exchangeRateDisplay.textContent = `ARS ${exchangeRate.toFixed(2)}`;
-    }, 500);
+    const apiKey = '44426f5c88d04ec487673e15502bdfb2'; // Clave API proporcionada por el usuario
+    const apiUrl = `https://v6.exchangerate-api.com/v6/${apiKey}/latest/USD`;
+
+    try {
+        const response = await fetch(apiUrl);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        if (data.result === 'success' && data.conversion_rates && data.conversion_rates.ARS) {
+            exchangeRate = data.conversion_rates.ARS;
+            exchangeRateDisplay.textContent = `ARS ${exchangeRate.toFixed(2)}`;
+            updateSummary('travel'); // Recalcular saldos de viaje con el nuevo tipo de cambio
+        } else {
+            throw new Error("Datos de tipo de cambio no válidos.");
+        }
+    } catch (error) {
+        console.error("Error fetching exchange rate:", error);
+        exchangeRateDisplay.textContent = 'Error al cargar';
+        showModal("Error al cargar el tipo de cambio. Usando valor predeterminado.");
+        exchangeRate = 1000; // Valor predeterminado en caso de error
+        updateSummary('travel'); // Recalcular saldos de viaje con el valor predeterminado
+    }
 }
 
 // --- Event Listeners ---
@@ -585,7 +632,6 @@ window.onload = () => {
     document.getElementById('generalExpenseForm').addEventListener('submit', (e) => {
         e.preventDefault();
         const expenseData = {
-            // Se elimina el campo de fecha para gastos generales
             item: document.getElementById('generalExpenseItem').value,
             price: parseFloat(document.getElementById('generalExpensePrice').value),
             currency: 'ARS', // Fijo para gastos generales
