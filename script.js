@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Divisor de Gastos</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Fuente Inter */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f4f8; /* Un color de fondo suave */
+        }
+        /* Estilo para el modal */
+        .modal {
+            display: none; /* Oculto por defecto */
+            position: fixed; /* Posición fija en la pantalla */
+            z-index: 1000; /* Por encima de todo lo demás */
+            left: 0;
+            top: 0;
+            width: 100%; /* Ancho completo */
+            height: 100%; /* Alto completo */
+            overflow: auto; /* Habilitar scroll si es necesario */
+            background-color: rgba(0,0,0,0.4); /* Fondo semi-transparente */
+            justify-content: center; /* Centrar contenido horizontalmente */
+            align-items: center; /* Centrar contenido verticalmente */
+        }
+        .modal-content {
+            background-color: #ffffff;
+            margin: auto;
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            max-width: 90%;
+            width: 400px;
+            text-align: center;
+        }
+        .close-button {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+        .close-button:hover,
+        .close-button:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        /* Estilos para los botones de navegación */
+        .nav-button {
+            @apply px-6 py-3 rounded-lg font-medium transition duration-300 ease-in-out;
+        }
+        .nav-button.active {
+            @apply bg-blue-600 text-white shadow-md;
+        }
+        .nav-button:not(.active) {
+            @apply bg-gray-200 text-gray-700 hover:bg-gray-300;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center py-8 px-4 sm:px-6 lg:px-8">
+
+    <!-- Encabezado de la aplicación -->
+    <header class="w-full max-w-4xl text-center mb-8">
+        <h1 class="text-4xl sm:text-5xl font-extrabold text-gray-900 mb-4">Divisor de Gastos</h1>
+        <p class="text-lg text-gray-600">Organiza y divide fácilmente los gastos de tu viaje o reuniones.</p>
+
+        <!-- Navegación entre modos -->
+        <div class="flex justify-center gap-4 mt-6 mb-8 p-2 bg-gray-100 rounded-xl shadow-inner">
+            <button id="travelModeBtn" class="nav-button active">Gastos de Viaje</button>
+            <button id="generalModeBtn" class="nav-button">Gastos</button>
+        </div>
+
+        <div id="exchangeRateContainer" class="mt-4 text-md text-gray-700">
+            Tipo de cambio USD a ARS: <span id="exchangeRateDisplay" class="font-semibold text-blue-700">Cargando...</span>
+        </div>
+    </header>
+
+    <!-- Contenedor principal de la aplicación -->
+    <main class="w-full max-w-4xl bg-white rounded-xl shadow-lg p-6 sm:p-8 space-y-8">
+
+        <!-- Sección de Gastos de Viaje -->
+        <div id="travelSection" class="mode-section">
+            <!-- Sección para añadir participantes -->
+            <section class="border-b border-gray-200 pb-6">
+                <h2 class="text-2xl font-semibold text-gray-800 mb-4">Participantes del Viaje</h2>
+                <div class="flex flex-col sm:flex-row gap-4 mb-4">
+                    <input type="text" id="travelParticipantName" placeholder="Nombre del participante"
+                           class="flex-grow p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                    <button id="addTravelParticipantBtn"
+                            class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105">
+                        Añadir Participante
+                    </button>
+                </div>
+                <div id="travelParticipantsList" class="flex flex-wrap gap-2">
+                    <!-- Los participantes se añadirán aquí -->
+                </div>
+            </section>
+
+            <!-- Sección para añadir un nuevo gasto de viaje -->
+            <section class="border-b border-gray-200 pb-6">
+                <h2 class="text-2xl font-semibold text-gray-800 mb-4">Añadir Nuevo Gasto de Viaje</h2>
+                <form id="travelExpenseForm" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Campo Fecha -->
+                    <div>
+                        <label for="travelExpenseDate" class="block text-sm font-medium text-gray-700 mb-1">Fecha</label>
+                        <input type="date" id="travelExpenseDate" required
+                               class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <!-- Campo Ítem -->
+                    <div>
+                        <label for="travelExpenseItem" class="block text-sm font-medium text-gray-700 mb-1">Ítem / Descripción</label>
+                        <input type="text" id="travelExpenseItem" placeholder="Ej: Cena, Nafta, Entrada al museo" required
+                               class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <!-- Campo Precio -->
+                    <div>
+                        <label for="travelExpensePrice" class="block text-sm font-medium text-gray-700 mb-1">Precio</label>
+                        <input type="number" id="travelExpensePrice" step="0.01" min="0" placeholder="0.00" required
+                               class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <!-- Campo Moneda -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Moneda</label>
+                        <div class="flex gap-4 p-3 border border-gray-300 rounded-lg bg-gray-50">
+                            <label class="inline-flex items-center">
+                                <input type="radio" name="travelCurrency" value="ARS" checked
+                                       class="form-radio h-5 w-5 text-blue-600">
+                                <span class="ml-2 text-gray-700">ARS</span>
+                            </label>
+                            <label class="inline-flex items-center">
+                                <input type="radio" name="travelCurrency" value="USD"
+                                       class="form-radio h-5 w-5 text-blue-600">
+                                <span class="ml-2 text-gray-700">USD</span>
+                            </label>
+                        </div>
+                    </div>
+                    <!-- Campo Quién Pagó -->
+                    <div>
+                        <label for="travelExpensePayer" class="block text-sm font-medium text-gray-700 mb-1">Quién Pagó</label>
+                        <select id="travelExpensePayer" required
+                                class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 bg-white">
+                            <option value="">Selecciona un participante</option>
+                            <!-- Los participantes se cargarán aquí dinámicamente -->
+                        </select>
+                    </div>
+                    <!-- Campo Quiénes Participan -->
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Quiénes Participan en este Gasto</label>
+                        <div id="travelInvolvedParticipantsCheckboxes" class="p-3 border border-gray-300 rounded-lg bg-gray-50 flex flex-wrap gap-x-4 gap-y-2">
+                            <!-- Las casillas de verificación de participantes se cargarán aquí dinámicamente -->
+                        </div>
+                    </div>
+                    <!-- Botón Añadir Gasto -->
+                    <div class="md:col-span-2 flex justify-end">
+                        <button type="submit"
+                                class="bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-8 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105">
+                            Añadir Gasto
+                        </button>
+                    </div>
+                </form>
+            </section>
+
+            <!-- Sección de lista de gastos de viaje -->
+            <section>
+                <h2 class="text-2xl font-semibold text-gray-800 mb-4">Lista de Gastos de Viaje</h2>
+                <div class="overflow-x-auto rounded-lg shadow-sm border border-gray-200">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ítem</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Precio</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Moneda</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pagó</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Participan</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="travelExpensesTableBody" class="bg-white divide-y divide-gray-200">
+                            <!-- Los gastos se añadirán aquí -->
+                        </tbody>
+                    </table>
+                </div>
+                <p id="noTravelExpensesMessage" class="text-center text-gray-500 mt-4 hidden">Aún no hay gastos de viaje. ¡Añade el primero!</p>
+            </section>
+
+            <!-- Sección de resumen de saldos de viaje -->
+            <section>
+                <h2 class="text-2xl font-semibold text-gray-800 mb-4">Resumen de Saldos de Viaje</h2>
+                <div id="travelSummarySection" class="bg-blue-50 border border-blue-200 rounded-lg p-6">
+                    <p class="text-gray-700 text-lg mb-2">Total de gastos del viaje: <span id="travelTotalExpenses" class="font-bold text-blue-800">ARS 0.00</span></p>
+                    <p class="text-gray-700 text-lg mb-4">Gasto promedio por persona: <span id="travelAverageExpense" class="font-bold text-blue-800">ARS 0.00</span></p>
+
+                    <h3 class="text-xl font-semibold text-gray-800 mb-3">Quién debe a quién:</h3>
+                    <ul id="travelBalanceList" class="list-disc list-inside text-gray-700 space-y-1">
+                        <!-- Los saldos se mostrarán aquí -->
+                        <li id="noTravelBalancesMessage" class="text-gray-500">Añade gastos para ver los saldos.</li>
+                    </ul>
+                </div>
+            </section>
+        </div> <!-- Fin travelSection -->
+
+        <!-- Sección de Gastos Generales -->
+        <div id="generalSection" class="mode-section hidden">
+            <!-- Sección para añadir participantes -->
+            <section class="border-b border-gray-200 pb-6">
+                <h2 class="text-2xl font-semibold text-gray-800 mb-4">Participantes de la Reunión</h2>
+                <div class="flex flex-col sm:flex-row gap-4 mb-4">
+                    <input type="text" id="generalParticipantName" placeholder="Nombre del participante"
+                           class="flex-grow p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                    <button id="addGeneralParticipantBtn"
+                            class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105">
+                        Añadir Participante
+                    </button>
+                </div>
+                <div id="generalParticipantsList" class="flex flex-wrap gap-2">
+                    <!-- Los participantes se añadirán aquí -->
+                </div>
+            </section>
+
+            <!-- Sección para añadir un nuevo gasto general -->
+            <section class="border-b border-gray-200 pb-6">
+                <h2 class="text-2xl font-semibold text-gray-800 mb-4">Añadir Nuevo Gasto</h2>
+                <form id="generalExpenseForm" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Campo Fecha -->
+                    <div>
+                        <label for="generalExpenseDate" class="block text-sm font-medium text-gray-700 mb-1">Fecha</label>
+                        <input type="date" id="generalExpenseDate" required
+                               class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <!-- Campo Ítem -->
+                    <div>
+                        <label for="generalExpenseItem" class="block text-sm font-medium text-gray-700 mb-1">Ítem / Descripción</label>
+                        <input type="text" id="generalExpenseItem" placeholder="Ej: Cena, Regalo, Entrada al cine" required
+                               class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <!-- Campo Precio -->
+                    <div>
+                        <label for="generalExpensePrice" class="block text-sm font-medium text-gray-700 mb-1">Precio (ARS)</label>
+                        <input type="number" id="generalExpensePrice" step="0.01" min="0" placeholder="0.00" required
+                               class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <!-- Campo Moneda (oculto y fijo en ARS) -->
+                    <div class="hidden">
+                        <input type="radio" name="generalCurrency" value="ARS" checked>
+                    </div>
+                    <!-- Campo Quién Pagó -->
+                    <div>
+                        <label for="generalExpensePayer" class="block text-sm font-medium text-gray-700 mb-1">Quién Pagó</label>
+                        <select id="generalExpensePayer" required
+                                class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 bg-white">
+                            <option value="">Selecciona un participante</option>
+                            <!-- Los participantes se cargarán aquí dinámicamente -->
+                        </select>
+                    </div>
+                    <!-- Campo Quiénes Participan -->
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Quiénes Participan en este Gasto</label>
+                        <div id="generalInvolvedParticipantsCheckboxes" class="p-3 border border-gray-300 rounded-lg bg-gray-50 flex flex-wrap gap-x-4 gap-y-2">
+                            <!-- Las casillas de verificación de participantes se cargarán aquí dinámicamente -->
+                        </div>
+                    </div>
+                    <!-- Botón Añadir Gasto -->
+                    <div class="md:col-span-2 flex justify-end">
+                        <button type="submit"
+                                class="bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-8 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105">
+                            Añadir Gasto
+                        </button>
+                    </div>
+                </form>
+            </section>
+
+            <!-- Sección de lista de gastos generales -->
+            <section>
+                <h2 class="text-2xl font-semibold text-gray-800 mb-4">Lista de Gastos</h2>
+                <div class="overflow-x-auto rounded-lg shadow-sm border border-gray-200">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ítem</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Precio</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Moneda</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pagó</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Participan</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="generalExpensesTableBody" class="bg-white divide-y divide-gray-200">
+                            <!-- Los gastos se añadirán aquí -->
+                        </tbody>
+                    </table>
+                </div>
+                <p id="noGeneralExpensesMessage" class="text-center text-gray-500 mt-4 hidden">Aún no hay gastos. ¡Añade el primero!</p>
+            </section>
+
+            <!-- Sección de resumen de saldos generales -->
+            <section>
+                <h2 class="text-2xl font-semibold text-gray-800 mb-4">Resumen de Saldos</h2>
+                <div id="generalSummarySection" class="bg-blue-50 border border-blue-200 rounded-lg p-6">
+                    <p class="text-gray-700 text-lg mb-2">Total de gastos: <span id="generalTotalExpenses" class="font-bold text-blue-800">ARS 0.00</span></p>
+                    <p class="text-gray-700 text-lg mb-4">Gasto promedio por persona: <span id="generalAverageExpense" class="font-bold text-blue-800">ARS 0.00</span></p>
+
+                    <h3 class="text-xl font-semibold text-gray-800 mb-3">Quién debe a quién:</h3>
+                    <ul id="generalBalanceList" class="list-disc list-inside text-gray-700 space-y-1">
+                        <!-- Los saldos se mostrarán aquí -->
+                        <li id="noGeneralBalancesMessage" class="text-gray-500">Añade gastos para ver los saldos.</li>
+                    </ul>
+                </div>
+            </section>
+        </div> <!-- Fin generalSection -->
+
+    </main>
+
+    <!-- Modal para mensajes -->
+    <div id="myModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button">&times;</span>
+            <p id="modalMessage" class="text-lg text-gray-800"></p>
+            <button id="modalOkButton" class="mt-4 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-5 rounded-lg transition duration-300 ease-in-out">OK</button>
+        </div>
+    </div>
+
+    <!-- Link to external JavaScript file -->
+    <script src="script.js"></script>
+</body>
+</html>
