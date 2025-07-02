@@ -121,26 +121,26 @@
         tbody tr:last-child td:last-child { border-bottom-right-radius: 1rem; }
     </style>
 </head>
-<body class="p-6">
+<body class="p-4 sm:p-6">
     <div class="container mx-auto">
-        <h1 class="text-4xl font-bold text-center mb-8 text-gray-800">Divisor de Gastos</h1>
+        <h1 class="text-3xl sm:text-4xl font-bold text-center mb-6 sm:mb-8 text-gray-800">Divisor de Gastos</h1>
 
         <!-- Selector de Modo -->
-        <div class="flex justify-center mb-6">
-            <button id="generalModeBtn" class="px-6 py-2 rounded-l-lg font-semibold transition duration-150 ease-in-out bg-blue-500 text-white active">Gastos Generales</button>
-            <button id="travelModeBtn" class="px-6 py-2 rounded-r-lg font-semibold transition duration-150 ease-in-out bg-gray-200 text-gray-700">Divisor de Gastos de Viaje</button>
+        <div class="flex flex-wrap justify-center mb-6">
+            <button id="generalModeBtn" class="flex-1 sm:flex-none px-4 py-2 sm:px-6 sm:py-2 rounded-l-lg font-semibold transition duration-150 ease-in-out bg-blue-500 text-white active text-sm sm:text-base">Gastos Generales</button>
+            <button id="travelModeBtn" class="flex-1 sm:flex-none px-4 py-2 sm:px-6 sm:py-2 rounded-r-lg font-semibold transition duration-150 ease-in-out bg-gray-200 text-gray-700 text-sm sm:text-base">Divisor de Gastos de Viaje</button>
         </div>
 
         <!-- Sección de Gastos Generales -->
-        <div id="generalSection" class="card p-6 mb-8">
-            <h2 class="text-2xl font-semibold mb-6 text-gray-700">Gastos Generales</h2>
+        <div id="generalSection" class="card p-4 sm:p-6 mb-6 sm:mb-8">
+            <h2 class="text-xl sm:text-2xl font-semibold mb-4 sm:mb-6 text-gray-700">Gastos Generales</h2>
 
             <!-- Añadir Participante -->
             <div class="mb-6">
-                <h3 class="text-xl font-medium mb-3 text-gray-600">Añadir Participante</h3>
-                <div class="flex items-center space-x-2">
+                <h3 class="text-lg sm:text-xl font-medium mb-3 text-gray-600">Añadir Participante</h3>
+                <div class="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-2">
                     <input type="text" id="generalParticipantName" placeholder="Nombre del participante" class="flex-grow p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
-                    <button id="addGeneralParticipantBtn" class="btn-primary">Añadir Participante</button>
+                    <button id="addGeneralParticipantBtn" class="btn-primary w-full sm:w-auto">Añadir Participante</button>
                 </div>
                 <div id="generalParticipantsList" class="flex flex-wrap gap-2 mt-4">
                     <!-- Los participantes se renderizarán aquí -->
@@ -149,7 +149,7 @@
 
             <!-- Añadir Gasto -->
             <div class="mb-6">
-                <h3 class="text-xl font-medium mb-3 text-gray-600">Añadir Gasto</h3>
+                <h3 class="text-lg sm:text-xl font-medium mb-3 text-gray-600">Añadir Gasto</h3>
                 <form id="generalExpenseForm" class="space-y-4">
                     <div>
                         <label for="generalExpenseItem" class="block text-sm font-medium text-gray-700 mb-1">Ítem</label>
@@ -178,7 +178,7 @@
 
             <!-- Lista de Gastos -->
             <div class="mb-6">
-                <h3 class="text-xl font-medium mb-3 text-gray-600">Lista de Gastos</h3>
+                <h3 class="text-lg sm:text-xl font-medium mb-3 text-gray-600">Lista de Gastos</h3>
                 <div class="overflow-x-auto card">
                     <table class="min-w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50" id="generalExpensesTableHeader">
@@ -201,11 +201,11 @@
 
             <!-- Resumen de Saldos -->
             <div>
-                <h3 class="text-xl font-medium mb-3 text-gray-600">Resumen de Saldos</h3>
+                <h3 class="text-lg sm:text-xl font-medium mb-3 text-gray-600">Resumen de Saldos</h3>
                 <div class="card p-4">
-                    <p class="text-lg font-medium mb-2">Total de gastos: <span id="generalTotalExpenses" class="font-bold">ARS 0.00</span></p>
-                    <p class="text-lg font-medium mb-4">Gasto promedio por persona: <span id="generalAverageExpense" class="font-bold">ARS 0.00</span></p>
-                    <h4 class="text-lg font-semibold mb-2">Quién debe a quién:</h4>
+                    <p class="text-base sm:text-lg font-medium mb-2">Total de gastos: <span id="generalTotalExpenses" class="font-bold">ARS 0.00</span></p>
+                    <p class="text-base sm:text-lg font-medium mb-4">Gasto promedio por persona: <span id="generalAverageExpense" class="font-bold">ARS 0.00</span></p>
+                    <h4 class="text-base sm:text-lg font-semibold mb-2">Quién debe a quién:</h4>
                     <ul id="generalBalanceList" class="list-disc list-inside space-y-1">
                         <!-- Los saldos se renderizarán aquí -->
                     </ul>
@@ -215,21 +215,21 @@
         </div>
 
         <!-- Sección de Divisor de Gastos de Viaje (Inicialmente oculta) -->
-        <div id="travelSection" class="card p-6 mb-8 hidden">
-            <h2 class="text-2xl font-semibold mb-6 text-gray-700">Divisor de Gastos de Viaje</h2>
+        <div id="travelSection" class="card p-4 sm:p-6 mb-6 sm:mb-8 hidden">
+            <h2 class="text-xl sm:text-2xl font-semibold mb-4 sm:mb-6 text-gray-700">Divisor de Gastos de Viaje</h2>
 
             <!-- Tipo de Cambio -->
             <div id="exchangeRateContainer" class="mb-6 p-4 bg-yellow-50 rounded-lg flex justify-between items-center">
-                <p class="text-lg font-medium text-yellow-800">Tipo de Cambio (1 USD):</p>
-                <span id="exchangeRateDisplay" class="text-lg font-bold text-yellow-900">Cargando...</span>
+                <p class="text-base sm:text-lg font-medium text-yellow-800">Tipo de Cambio (1 USD):</p>
+                <span id="exchangeRateDisplay" class="text-base sm:text-lg font-bold text-yellow-900">Cargando...</span>
             </div>
 
             <!-- Añadir Participante -->
             <div class="mb-6">
-                <h3 class="text-xl font-medium mb-3 text-gray-600">Añadir Participante</h3>
-                <div class="flex items-center space-x-2">
+                <h3 class="text-lg sm:text-xl font-medium mb-3 text-gray-600">Añadir Participante</h3>
+                <div class="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-2">
                     <input type="text" id="travelParticipantName" placeholder="Nombre del participante" class="flex-grow p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
-                    <button id="addTravelParticipantBtn" class="btn-primary">Añadir Participante</button>
+                    <button id="addTravelParticipantBtn" class="btn-primary w-full sm:w-auto">Añadir Participante</button>
                 </div>
                 <div id="travelParticipantsList" class="flex flex-wrap gap-2 mt-4">
                     <!-- Los participantes se renderizarán aquí -->
@@ -238,7 +238,7 @@
 
             <!-- Añadir Gasto -->
             <div class="mb-6">
-                <h3 class="text-xl font-medium mb-3 text-gray-600">Añadir Gasto</h3>
+                <h3 class="text-lg sm:text-xl font-medium mb-3 text-gray-600">Añadir Gasto</h3>
                 <form id="travelExpenseForm" class="space-y-4">
                     <div>
                         <label for="travelExpenseDate" class="block text-sm font-medium text-gray-700 mb-1">Fecha</label>
@@ -284,7 +284,7 @@
 
             <!-- Lista de Gastos -->
             <div class="mb-6">
-                <h3 class="text-xl font-medium mb-3 text-gray-600">Lista de Gastos</h3>
+                <h3 class="text-lg sm:text-xl font-medium mb-3 text-gray-600">Lista de Gastos</h3>
                 <div class="overflow-x-auto card">
                     <table class="min-w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50" id="travelExpensesTableHeader">
@@ -308,11 +308,11 @@
 
             <!-- Resumen de Saldos -->
             <div>
-                <h3 class="text-xl font-medium mb-3 text-gray-600">Resumen de Saldos</h3>
+                <h3 class="text-lg sm:text-xl font-medium mb-3 text-gray-600">Resumen de Saldos</h3>
                 <div class="card p-4">
-                    <p class="text-lg font-medium mb-2">Total de gastos: <span id="travelTotalExpenses" class="font-bold">ARS 0.00</span></p>
-                    <p class="text-lg font-medium mb-4">Gasto promedio por persona: <span id="travelAverageExpense" class="font-bold">ARS 0.00</span></p>
-                    <h4 class="text-lg font-semibold mb-2">Quién debe a quién:</h4>
+                    <p class="text-base sm:text-lg font-medium mb-2">Total de gastos: <span id="travelTotalExpenses" class="font-bold">ARS 0.00</span></p>
+                    <p class="text-base sm:text-lg font-medium mb-4">Gasto promedio por persona: <span id="travelAverageExpense" class="font-bold">ARS 0.00</span></p>
+                    <h4 class="text-base sm:text-lg font-semibold mb-2">Quién debe a quién:</h4>
                     <ul id="travelBalanceList" class="list-disc list-inside space-y-1">
                         <!-- Los saldos se renderizarán aquí -->
                     </ul>
