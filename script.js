@@ -7,6 +7,7 @@ let app;
 let db;
 let auth;
 let userId;
+let appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id'; // Asegurar que appId siempre esté definido
 let currentMode = 'general'; // 'general' o 'travel'
 let exchangeRate = 1; // Valor inicial, se actualizará con la API
 let editingExpenseId = null; // Para almacenar el ID del gasto que se está editando
@@ -61,17 +62,18 @@ async function initializeFirebase() {
 
         let firebaseConfig = {};
         try {
-            firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+            const rawConfig = typeof __firebase_config !== 'undefined' ? __firebase_config : '{}';
+            firebaseConfig = JSON.parse(rawConfig);
         } catch (e) {
             console.error("Error al parsear __firebase_config:", e);
-            showModal("Error: La configuración de Firebase no es un JSON válido.");
-            return;
+            showModal("Error: La configuración de Firebase no es un JSON válido. Por favor, contacta al soporte.");
+            return; // Detener la inicialización si la configuración es inválida
         }
 
         if (Object.keys(firebaseConfig).length === 0) {
             console.error("Firebase config está vacío después de parsear.");
-            showModal("Error: Firebase no está configurado correctamente. La configuración está vacía.");
-            return;
+            showModal("Error: Firebase no está configurado correctamente. La configuración está vacía. Por favor, contacta al soporte.");
+            return; // Detener la inicialización si la configuración está vacía
         }
         
         console.log("Firebase config (parsed):", firebaseConfig);
@@ -90,7 +92,7 @@ async function initializeFirebase() {
                 console.log("Autenticación con token personalizado exitosa.");
             } catch (authError) {
                 console.error("Error al autenticar con token personalizado:", authError);
-                showModal(`Error de autenticación: ${authError.message}. Intentando iniciar sesión anónimamente.`);
+                showModal(`Error de autenticación con token: ${authError.message}. Intentando iniciar sesión anónimamente.`);
                 await signInAnonymously(auth); // Fallback a anónimo si el token falla
             }
         } else {
@@ -115,12 +117,15 @@ async function initializeFirebase() {
                 travelParticipants = [];
                 travelExpenses = [];
                 updateUI(); // Actualizar UI para reflejar datos vacíos
-                showModal("No se pudo autenticar al usuario. Por favor, recarga la página.");
+                showModal("No se pudo autenticar al usuario. Algunas funcionalidades pueden estar limitadas. Por favor, recarga la página si persisten los problemas.");
             }
         });
     } catch (error) {
         console.error("Error general al inicializar Firebase o autenticar:", error);
-        showModal(`Error crítico al iniciar Firebase: ${error.message}.`);
+        showModal(`Error crítico al iniciar Firebase: ${error.message}. La aplicación puede no funcionar correctamente.`);
+    } finally {
+        // Asegurarse de que la UI siempre se actualice después del intento de inicialización
+        updateUI();
     }
 }
 
@@ -128,11 +133,8 @@ async function initializeFirebase() {
  * Configura los listeners de Firestore para cada colección.
  */
 function setupFirestoreListeners() {
-    const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
     if (!userId) {
-        console.warn("No userId available for Firestore listeners. Retrying setupFirestoreListeners after authentication.");
-        // Podríamos añadir un pequeño retardo y reintentar si userId es nulo,
-        // pero onAuthStateChanged ya debería manejarlo.
+        console.warn("setupFirestoreListeners llamado sin userId. No se configurarán los listeners.");
         return;
     }
     console.log(`Configurando listeners de Firestore para appId: ${appId}, userId: ${userId}`);
@@ -156,7 +158,7 @@ function setupFirestoreListeners() {
         console.log("Gastos generales cargados:", generalExpenses.length);
     }, (error) => {
         console.error("Error fetching general expenses:", error);
-        showModal(`Error al cargar gastos generales: ${error.message}`);
+        showModal(`Error al cargar gastos generales: ${e.message}`);
     });
 
     // Listener para participantes de viaje
@@ -191,7 +193,7 @@ function setupFirestoreListeners() {
  */
 async function addParticipant(mode, name) {
     if (!userId) {
-        showModal("Error: Usuario no autenticado. Por favor, recarga la página.");
+        showModal("Error: Usuario no autenticado. No se puede añadir participante. Por favor, recarga la página.");
         return;
     }
     if (!name.trim()) {
@@ -215,7 +217,7 @@ async function addParticipant(mode, name) {
  */
 async function deleteParticipant(mode, id) {
     if (!userId) {
-        showModal("Error: Usuario no autenticado. Por favor, recarga la página.");
+        showModal("Error: Usuario no autenticado. No se puede eliminar participante. Por favor, recarga la página.");
         return;
     }
     const participantDocRef = doc(db, `artifacts/${appId}/users/${userId}/${mode}Participants`, id);
@@ -298,7 +300,7 @@ function renderParticipants(mode) {
  */
 async function addExpense(mode, expenseData) {
     if (!userId) {
-        showModal("Error: Usuario no autenticado. Por favor, recarga la página.");
+        showModal("Error: Usuario no autenticado. No se puede añadir gasto. Por favor, recarga la página.");
         return;
     }
     const expensesRef = collection(db, `artifacts/${appId}/users/${userId}/${mode}Expenses`);
@@ -375,7 +377,7 @@ function editExpense(mode, id) {
  */
 async function deleteExpense(mode, id) {
     if (!userId) {
-        showModal("Error: Usuario no autenticado. Por favor, recarga la página.");
+        showModal("Error: Usuario no autenticado. No se puede eliminar gasto. Por favor, recarga la página.");
         return;
     }
     const expenseDocRef = doc(db, `artifacts/${appId}/users/${userId}/${mode}Expenses`, id);
