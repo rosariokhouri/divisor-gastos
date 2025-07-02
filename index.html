@@ -63,16 +63,16 @@
 </head>
 <body class="min-h-screen flex flex-col items-center py-8 px-4 sm:px-6 lg:px-8">
 
+    <!-- Navegación entre modos - Movido a la parte superior -->
+    <nav class="w-full max-w-4xl flex justify-center gap-4 mb-8 p-2 bg-gray-100 rounded-xl shadow-inner">
+        <button id="travelModeBtn" class="nav-button active">Gastos de Viaje</button>
+        <button id="generalModeBtn" class="nav-button">Gastos</button>
+    </nav>
+
     <!-- Encabezado de la aplicación -->
     <header class="w-full max-w-4xl text-center mb-8">
         <h1 class="text-4xl sm:text-5xl font-extrabold text-gray-900 mb-4">Divisor de Gastos</h1>
         <p class="text-lg text-gray-600">Organiza y divide fácilmente los gastos de tu viaje o reuniones.</p>
-
-        <!-- Navegación entre modos -->
-        <div class="flex justify-center gap-4 mt-6 mb-8 p-2 bg-gray-100 rounded-xl shadow-inner">
-            <button id="travelModeBtn" class="nav-button active">Gastos de Viaje</button>
-            <button id="generalModeBtn" class="nav-button">Gastos</button>
-        </div>
 
         <div id="exchangeRateContainer" class="mt-4 text-md text-gray-700">
             Tipo de cambio USD a ARS: <span id="exchangeRateDisplay" class="font-semibold text-blue-700">Cargando...</span>
