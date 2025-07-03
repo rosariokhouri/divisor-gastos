@@ -337,7 +337,7 @@ function editExpense(mode, id) {
 
         // Load data into the form
         document.getElementById(`${mode}ExpenseItem`).value = expenseToEdit.item;
-        document.getElementById(`${mode}ExpensePrice`).value = expenseToEdit.price;
+        document.getElementById(`${mode}ExpensePrice`).value = parseFloat(expenseToEdit.price); // Ensure it's a number
         document.getElementById(`${mode}ExpensePayer`).value = expenseToEdit.payer;
 
         // Uncheck all checkboxes first
@@ -609,26 +609,34 @@ function updateUI() {
  */
 async function fetchExchangeRate() {
     exchangeRateDisplay.textContent = 'Cargando...';
-    const apiKey = '44426f5c88d04ec487673e15502bdfb2'; // API Key provided by the user
-    const apiUrl = `https://v6.exchangerate-api.com/v6/${apiKey}/latest/USD`;
+    // Using the API key provided by the user for Open Exchange Rates
+    const apiKey = '44426f5c88d04ec487673e15502bdfb2'; 
+    const apiUrl = `https://openexchangerates.org/api/latest.json?app_id=${apiKey}`;
 
     try {
         const response = await fetch(apiUrl);
         if (!response.ok) {
+            console.error(`API response was not ok: ${response.status} ${response.statusText}`);
             throw new Error(`HTTP error! status: ${response.status}`);
         }
         const data = await response.json();
-        if (data.result === 'success' && data.conversion_rates && data.conversion_rates.ARS) {
-            exchangeRate = data.conversion_rates.ARS;
+        console.log("Open Exchange Rates API Response:", data); // Log the full response
+
+        if (data.rates && data.rates.ARS) {
+            exchangeRate = data.rates.ARS;
             exchangeRateDisplay.textContent = `ARS ${exchangeRate.toFixed(2)}`;
             updateSummary('travel'); // Recalculate travel balances with the new exchange rate
-        } else {
-            throw new Error("Invalid exchange rate data.");
+        } else if (data.error) {
+            console.error("Open Exchange Rates API Error:", data.description || data.message);
+            throw new Error(`API Error: ${data.description || data.message}`);
+        }
+        else {
+            throw new Error("Invalid exchange rate data format from Open Exchange Rates.");
         }
     } catch (error) {
         console.error("Error fetching exchange rate:", error);
         exchangeRateDisplay.textContent = 'Error al cargar';
-        showModal("Error al cargar el tipo de cambio. Usando valor predeterminado.");
+        showModal(`Error al cargar el tipo de cambio: ${error.message}. Usando valor predeterminado.`);
         exchangeRate = 1000; // Default value in case of error
         updateSummary('travel'); // Recalculate travel balances with the default value
     }
