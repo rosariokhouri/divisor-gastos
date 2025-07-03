@@ -608,9 +608,39 @@ function updateUI() {
  * Fetches the USD to ARS exchange rate from an external API.
  */
 async function fetchExchangeRate() {
-    exchangeRateDisplay.textContent = 'ARS ${exchangeRate.toFixed(2)} (Valor predeterminado)';
-    showModal("No se pudo cargar el tipo de cambio desde la API. Usando un valor predeterminado (1 USD = 1000 ARS).");
-    updateSummary('travel'); // Recalculate travel balances with the default value
+    exchangeRateDisplay.textContent = 'Cargando...';
+    // Using the API key provided by the user for Open Exchange Rates
+    const apiKey = '44426f5c88d04ec487673e15502bdfb2'; 
+    const apiUrl = `https://openexchangerates.org/api/latest.json?app_id=${apiKey}`;
+
+    try {
+        const response = await fetch(apiUrl);
+        if (!response.ok) {
+            console.error(`API response was not ok: ${response.status} ${response.statusText}`);
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        console.log("Open Exchange Rates API Response:", data); // Log the full response
+
+        // Check for 'rates' object and 'ARS' property within it
+        if (data.rates && data.rates.ARS) {
+            exchangeRate = data.rates.ARS;
+            exchangeRateDisplay.textContent = `ARS ${exchangeRate.toFixed(2)}`;
+            updateSummary('travel'); // Recalculate travel balances with the new exchange rate
+        } else if (data.error) {
+            console.error("Open Exchange Rates API Error:", data.description || data.message);
+            throw new Error(`API Error: ${data.description || data.message}`);
+        }
+        else {
+            throw new Error("Invalid exchange rate data format from Open Exchange Rates.");
+        }
+    } catch (error) {
+        console.error("Error fetching exchange rate:", error);
+        exchangeRateDisplay.textContent = `ARS ${exchangeRate.toFixed(2)} (Valor predeterminado)`; // Display default value
+        showModal(`Error al cargar el tipo de cambio: ${error.message}. Usando un valor predeterminado.`);
+        // No need to set exchangeRate here, it's already the default 1000
+        updateSummary('travel'); // Recalculate travel balances with the default value
+    }
 }
 
 // --- Event Listeners ---
